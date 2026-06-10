@@ -1024,13 +1024,20 @@ func (a *App) GetAvailableShells() []string {
 	case "windows":
 		add("pwsh.exe")
 		add("powershell.exe")
-		add("bash.exe")
 		add("cmd.exe")
-		// Only add explicit Git for Windows paths if bash wasn't found via PATH.
+		// Prefer explicit Git for Windows paths over WSL bash to avoid
+		// WSL relay errors when no Linux distribution is installed.
+		// On Windows, LookPath("bash.exe") finds C:\Windows\System32\bash.exe
+		// (the WSL launcher) before Git Bash, which fails if WSL isn't set up.
+		for _, p := range []string{
+			`C:\Program Files\Git\bin\bash.exe`,
+			`C:\Program Files (x86)\Git\bin\bash.exe`,
+			`C:\ProgramData\chocolatey\bin\bash.exe`,
+		} {
+			add(p)
+		}
 		if !hasShell("bash.exe") {
-			add(`C:\Program Files\Git\bin\bash.exe`)
-			add(`C:\Program Files (x86)\Git\bin\bash.exe`)
-			add(`C:\ProgramData\chocolatey\bin\bash.exe`)
+			add("bash.exe")
 		}
 	default:
 		add(os.Getenv("SHELL"))
@@ -1052,6 +1059,16 @@ func (a *App) GetDefaultShell() string {
 		}
 		if _, err := exec.LookPath("powershell.exe"); err == nil {
 			return "powershell.exe"
+		}
+		// Prefer explicit Git for Windows paths over WSL bash to avoid
+		// WSL relay errors when no Linux distribution is installed.
+		for _, p := range []string{
+			`C:\Program Files\Git\bin\bash.exe`,
+			`C:\Program Files (x86)\Git\bin\bash.exe`,
+		} {
+			if _, err := os.Stat(p); err == nil {
+				return p
+			}
 		}
 		if _, err := exec.LookPath("bash.exe"); err == nil {
 			return "bash.exe"
