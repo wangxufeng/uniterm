@@ -6,6 +6,24 @@
 
 [简体中文](README_zh-CN.md)
 
+[![GitHub release](https://img.shields.io/github/v/release/ys-ll/uniterm?include_prereleases)](https://github.com/ys-ll/uniterm/releases)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue)](https://github.com/ys-ll/uniterm)
+[![License](https://img.shields.io/badge/license-Apache%202.0-green)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/ys-ll/uniterm)](https://github.com/ys-ll/uniterm)
+
+## Table of Contents
+
+- [Features](#features)
+- [Screenshots](#screenshots)
+- [Quick Workflows](#quick-workflows)
+- [Download](#download)
+- [Tech Stack](#tech-stack)
+- [Prerequisites](#prerequisites)
+- [Getting Started](#getting-started)
+- [Project Structure](#project-structure)
+- [Feedback & Contributing](#feedback--contributing)
+- [License](#license)
+
 ## Features
 
 ### AI Assistant
@@ -41,6 +59,16 @@ Connection management, workspace splits, cloud sync, themes — your terminal, y
 - **Internationalization** — 9-language UI: zh-CN, zh-TW, en, ja, ko, de, es, fr, ru.
 - **Cross-Platform** — Built on Wails v2, runs natively on Windows, macOS, and Linux.
 
+## Screenshots
+
+<p align="center">
+  <img src="docs/imgs/screenshot-ssh-ai.png" alt="SSH Terminal with AI" width="45%" />
+  <img src="docs/imgs/screenshot-sftp.png" alt="SFTP File Manager" width="45%" />
+</p>
+<p align="center">
+  <img src="docs/imgs/screenshot-ai-config.png" alt="AI Model Config" width="45%" />
+</p>
+
 ## Quick Workflows
 
 ### SSH Connection
@@ -60,6 +88,14 @@ Connection management, workspace splits, cloud sync, themes — your terminal, y
 1. In the Connection Manager, **right-click** an SSH connection
 2. Select **Connect SFTP**
 3. Browse, upload, download, and drag-and-drop files in the dual-pane file manager
+
+## Download
+
+Get the latest pre-built binaries from [GitHub Releases](https://github.com/ys-ll/uniterm/releases):
+
+- **Windows**: Download `uniterm-windows-amd64-installer-*.exe` installer
+- **macOS**: Download `uniterm-darwin-universal-*.dmg`
+- **Linux**: Download `uniterm-linux-amd64-*.tar.gz`
 
 ## Tech Stack
 
@@ -114,6 +150,10 @@ uniTerm/
 │       └── types/                # TypeScript type definitions
 └── wails.json
 ```
+
+## Feedback &amp; Contributing
+
+Issues, suggestions, and feedback are welcome at [GitHub Issues](https://github.com/ys-ll/uniterm/issues).
 
 ## License
 

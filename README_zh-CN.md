@@ -6,6 +6,24 @@
 
 [English](README.md)
 
+[![GitHub release](https://img.shields.io/github/v/release/ys-ll/uniterm?include_prereleases)](https://github.com/ys-ll/uniterm/releases)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue)](https://github.com/ys-ll/uniterm)
+[![License](https://img.shields.io/badge/license-Apache%202.0-green)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/ys-ll/uniterm)](https://github.com/ys-ll/uniterm)
+
+## 目录
+
+- [功能特性](#功能特性)
+- [界面截图](#界面截图)
+- [使用流程](#使用流程)
+- [下载安装](#下载安装)
+- [技术栈](#技术栈)
+- [环境要求](#环境要求)
+- [快速开始](#快速开始)
+- [项目结构](#项目结构)
+- [反馈与贡献](#反馈与贡献)
+- [开源协议](#开源协议)
+
 ## 功能特性
 
 ### AI 助理
@@ -41,6 +59,16 @@
 - **国际化** — 支持简中、繁中、英、日、韩、德、西、法、俄等 9 种语言界面。
 - **跨平台** — 基于 Wails v2 构建，原生运行于 Windows、macOS、Linux 三大桌面平台。
 
+## 界面截图
+
+<p align="center">
+  <img src="docs/imgs/screenshot-ssh-ai.png" alt="SSH 终端与 AI 对话" width="45%" />
+  <img src="docs/imgs/screenshot-sftp.png" alt="SFTP 文件管理器" width="45%" />
+</p>
+<p align="center">
+  <img src="docs/imgs/screenshot-ai-config.png" alt="AI 模型配置" width="45%" />
+</p>
+
 ## 使用流程
 
 ### SSH 连接
@@ -60,6 +88,14 @@
 1. 在连接管理器中**右键**一个 SSH 连接
 2. 选择**连接 SFTP**
 3. 在双栏文件管理器中浏览、上传、下载或拖拽文件
+
+## 下载安装
+
+前往 [GitHub Releases](https://github.com/ys-ll/uniterm/releases) 下载最新版本：
+
+- **Windows**: 下载 `uniterm-windows-amd64-installer-*.exe` 安装包
+- **macOS**: 下载 `uniterm-darwin-universal-*.dmg`
+- **Linux**: 下载 `uniterm-linux-amd64-*.tar.gz`
 
 ## 技术栈
 
@@ -114,6 +150,10 @@ uniTerm/
 │       └── types/                # TypeScript 类型定义
 └── wails.json
 ```
+
+## 反馈与贡献
+
+欢迎通过 [GitHub Issues](https://github.com/ys-ll/uniterm/issues) 提交问题、建议或使用反馈。
 
 ## 开源协议
 
