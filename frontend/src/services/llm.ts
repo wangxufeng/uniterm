@@ -44,7 +44,7 @@ export async function chat(options: ChatOptions): Promise<void> {
     max_tokens: 4096,
     system: options.system,
     messages: options.messages,
-    tools: options.tools
+    tools: options.tools,
   }
 
   const requestJSON = JSON.stringify(requestBody)
@@ -79,7 +79,9 @@ export async function chat(options: ChatOptions): Promise<void> {
     content: rawContent
   }
 
-  // Dispatch text and tool_use blocks
+  // Dispatch text and tool_use blocks.
+  // When streaming, most text already arrived via ai:token events from the Go backend.
+  // This final dispatch covers any remaining blocks (e.g., tool_use) and non-streaming fallback.
   for (const block of rawContent) {
     switch (block.type) {
       case 'text':

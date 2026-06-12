@@ -76,9 +76,9 @@
       />
     </div>
 
-    <!-- AI button (icon only) -->
+    <!-- AI button -->
     <button class="header-btn accent ai-btn" @click="emit('toggle-ai')" :title="t('header.ai')">
-      AI
+      {{ t('header.ai') }}
     </button>
 
     <!-- Settings button (icon only, rightmost) -->

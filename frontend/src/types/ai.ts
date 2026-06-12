@@ -33,6 +33,7 @@ export interface AIMessage {
   role: 'user' | 'assistant' | 'tool'
   content: string
   _rawApiMsg?: Record<string, unknown>  // exact message from API, passed back verbatim
+  _contextHeader?: string  // dynamic context prepended in API requests but hidden in UI
   tool_calls?: ToolCall[]
   tool_call_id?: string
   pendingTools?: PendingTool[]

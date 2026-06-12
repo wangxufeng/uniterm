@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/base64"
@@ -15,6 +16,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	stdsync "sync"
 	"time"
 	goruntime "runtime"
 
@@ -39,6 +41,8 @@ type App struct {
 	wndProcCb           uintptr // keep alive to prevent GC
 	inSizeMove          bool
 	webviewDataPath     string
+	chatCancel          context.CancelFunc // active stream cancellation
+	chatCancelMu        stdsync.Mutex       // guards chatCancel
 }
 
 func NewApp(webviewDataPath string) *App {
@@ -778,36 +782,201 @@ func (a *App) DeleteTerminalHistoryEntry(ids []string) error {
 	return a.terminalHistoryStore.DeleteByIDs(ids)
 }
 
-// ChatCompletion proxies Anthropic-native LLM API requests through the Go backend.
-// The frontend now sends Anthropic-format JSON directly; the backend just passes it through.
+// ChatCompletion streams the Anthropic API response via SSE, emitting Wails
+// events for each token while collecting the full message. It returns the
+// complete message JSON when the stream ends (backward-compatible).
 func (a *App) ChatCompletion(apiKey, baseURL, model string, requestJSON string, protocol string) (string, error) {
-	url := baseURL + "/messages"
-	req, err := http.NewRequest("POST", url, bytes.NewReader([]byte(requestJSON)))
+	// Inject stream: true into the request body
+	var reqBody map[string]interface{}
+	if err := json.Unmarshal([]byte(requestJSON), &reqBody); err != nil {
+		return "", fmt.Errorf("invalid request JSON: %w", err)
+	}
+	reqBody["stream"] = true
+
+	modifiedJSON, err := json.Marshal(reqBody)
+	if err != nil {
+		return "", fmt.Errorf("marshal modified request: %w", err)
+	}
+
+	url := strings.TrimRight(baseURL, "/") + "/messages"
+
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+
+	// Store cancel for frontend stop
+	a.chatCancelMu.Lock()
+	a.chatCancel = cancel
+	a.chatCancelMu.Unlock()
+	defer func() {
+		a.chatCancelMu.Lock()
+		a.chatCancel = nil
+		a.chatCancelMu.Unlock()
+	}()
+
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(modifiedJSON))
 	if err != nil {
 		return "", err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("x-api-key", apiKey)
 	req.Header.Set("anthropic-version", "2023-06-01")
+	req.Header.Set("anthropic-beta", "prompt-caching-2024-07-31")
 	req.Header.Set("User-Agent", "uniTerm")
 
-	client := &http.Client{Timeout: 120 * time.Second}
+	client := &http.Client{Timeout: 0} // no timeout; context handles it
 	res, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}
 	defer res.Body.Close()
 
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return "", err
-	}
-
 	if res.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(res.Body)
 		return "", fmt.Errorf("HTTP %d: %s", res.StatusCode, string(body))
 	}
 
-	return string(body), nil
+	// Accumulated state from SSE events
+	var contentBlocks []map[string]interface{}
+	var currentBlock map[string]interface{}
+	var messageRole string
+	var usage map[string]interface{}
+	currentBlockIndex := -1
+
+	scanner := bufio.NewScanner(res.Body)
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024) // 1MB max line
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if !strings.HasPrefix(line, "data: ") {
+			continue
+		}
+		dataStr := line[6:]
+
+		var event map[string]interface{}
+		if err := json.Unmarshal([]byte(dataStr), &event); err != nil {
+			continue
+		}
+
+		eventType, _ := event["type"].(string)
+
+		switch eventType {
+		case "message_start":
+			if msg, ok := event["message"].(map[string]interface{}); ok {
+				messageRole, _ = msg["role"].(string)
+			}
+
+		case "content_block_start":
+			currentBlockIndex++
+			if block, ok := event["content_block"].(map[string]interface{}); ok {
+				currentBlock = block
+				runtime.EventsEmit(a.ctx, "ai:block_start", map[string]interface{}{
+					"index":         currentBlockIndex,
+					"content_block": block,
+				})
+			}
+
+		case "content_block_delta":
+			delta, _ := event["delta"].(map[string]interface{})
+			deltaType, _ := delta["type"].(string)
+
+			if deltaType == "text_delta" {
+				text, _ := delta["text"].(string)
+				// Accumulate text into the current block for the final response
+				if currentBlock != nil {
+					if currentBlock["text"] == nil {
+						currentBlock["text"] = ""
+					}
+					currentBlock["text"] = currentBlock["text"].(string) + text
+				}
+				runtime.EventsEmit(a.ctx, "ai:token", map[string]interface{}{
+					"text":  text,
+					"index": currentBlockIndex,
+				})
+			}
+			if deltaType == "input_json_delta" && currentBlock != nil {
+				partial, _ := delta["partial_json"].(string)
+				// content_block_start sets input to {} for tool_use; reset to ""
+				if currentBlock["input"] == nil || fmt.Sprintf("%T", currentBlock["input"]) != "string" {
+					currentBlock["input"] = ""
+				}
+				if s, ok := currentBlock["input"].(string); ok {
+					currentBlock["input"] = s + partial
+				}
+			}
+
+		case "content_block_stop":
+			if currentBlock != nil {
+				if blockType, _ := currentBlock["type"].(string); blockType == "tool_use" {
+					if inputStr, ok := currentBlock["input"].(string); ok && inputStr != "" {
+						var inputObj map[string]interface{}
+						if err := json.Unmarshal([]byte(inputStr), &inputObj); err == nil {
+							currentBlock["input"] = inputObj
+						}
+					}
+				}
+				contentBlocks = append(contentBlocks, currentBlock)
+				currentBlock = nil
+			}
+
+		case "message_delta":
+			if u, ok := event["usage"].(map[string]interface{}); ok {
+				usage = u
+			}
+			if delta, ok := event["delta"].(map[string]interface{}); ok {
+				if stopReason, ok := delta["stop_reason"].(string); ok {
+					runtime.EventsEmit(a.ctx, "ai:done", map[string]interface{}{
+						"message": map[string]interface{}{
+							"role":    messageRole,
+							"content": contentBlocks,
+						},
+						"usage":       usage,
+						"stop_reason": stopReason,
+					})
+				}
+			}
+
+		case "message_stop":
+			fullMessage := map[string]interface{}{
+				"role":    messageRole,
+				"content": contentBlocks,
+			}
+			resultJSON, err := json.Marshal(fullMessage)
+			if err != nil {
+				return "", fmt.Errorf("marshal full message: %w", err)
+			}
+			return string(resultJSON), nil
+
+		case "error":
+			errData, _ := event["error"].(map[string]interface{})
+			errMsg, _ := errData["message"].(string)
+			return "", fmt.Errorf("stream error: %s", errMsg)
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return "", err
+	}
+
+	// Stream ended without message_stop — return what we have
+	if len(contentBlocks) > 0 {
+		fullMessage := map[string]interface{}{
+			"role":    messageRole,
+			"content": contentBlocks,
+		}
+		resultJSON, _ := json.Marshal(fullMessage)
+		return string(resultJSON), nil
+	}
+
+	return "", fmt.Errorf("stream ended without message_stop")
+}
+
+// CancelChatStream cancels the currently active ChatCompletion stream.
+func (a *App) CancelChatStream() {
+	a.chatCancelMu.Lock()
+	defer a.chatCancelMu.Unlock()
+	if a.chatCancel != nil {
+		a.chatCancel()
+	}
 }
 
 // ModelInfo represents a model entry from the /v1/models response.

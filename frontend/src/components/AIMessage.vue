@@ -29,11 +29,11 @@
         <div v-for="tc in message.tool_calls" :key="tc.id" class="tool-pair">
           <!-- IN box -->
           <div class="tool-box in-box">
-            <div class="tool-box-header">
-              <span class="tool-box-label" @click="inExpanded = !inExpanded">{{ t('ai.in') }}</span>
+            <div class="tool-box-header" @click="inExpanded = !inExpanded">
+              <span class="tool-box-label">{{ t('ai.in') }}</span>
               <span class="tool-box-count"></span>
               <button class="tool-copy-btn" @click.stop="copyToolText(tc.function.arguments, tc.id + '-in')" :title="t('ai.copy')"><el-icon><Check v-if="copiedTool === tc.id + '-in'" :size="14" /><Copy v-else :size="14" /></el-icon></button>
-              <span class="toggle-icon" @click="inExpanded = !inExpanded">{{ inExpanded ? '▼' : '▶' }}</span>
+              <span class="toggle-icon">{{ inExpanded ? '▼' : '▶' }}</span>
             </div>
             <div v-show="inExpanded" class="tool-box-body">
               <pre class="tool-call-args">{{ formatArgs(tc.function.arguments) }}</pre>
@@ -42,11 +42,11 @@
 
           <!-- OUT box -->
           <div v-if="getToolResult(tc.id)" class="tool-box out-box">
-            <div class="tool-box-header">
-              <span class="tool-box-label" @click="outExpanded = !outExpanded">{{ t('ai.out') }}</span>
+            <div class="tool-box-header" @click="outExpanded = !outExpanded">
+              <span class="tool-box-label">{{ t('ai.out') }}</span>
               <span class="tool-box-count"></span>
               <button class="tool-copy-btn" @click.stop="copyToolText(getToolResult(tc.id)?.content || '', tc.id + '-out')" :title="t('ai.copy')"><el-icon><Check v-if="copiedTool === tc.id + '-out'" :size="14" /><Copy v-else :size="14" /></el-icon></button>
-              <span class="toggle-icon" @click="outExpanded = !outExpanded">{{ outExpanded ? '▼' : '▶' }}</span>
+              <span class="toggle-icon">{{ outExpanded ? '▼' : '▶' }}</span>
             </div>
             <div v-show="outExpanded" class="tool-box-body">
               <pre class="tool-output">{{ getToolResult(tc.id)?.content }}</pre>

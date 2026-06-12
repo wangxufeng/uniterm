@@ -3,6 +3,9 @@ import { executeCommand } from './terminalAgent'
 import { useAIStore } from '../stores/aiStore'
 import { useTabStore } from '../stores/tabStore'
 import { usePanelStore } from '../stores/panelStore'
+import { EventsOn } from '../../wailsjs/runtime'
+import { CancelChatStream } from '../../wailsjs/go/main/App'
+import type { AIMessage } from '../types/ai'
 
 function getActivePanel() {
   const tabStore = useTabStore()
@@ -67,22 +70,54 @@ function getShellName(path?: string): string {
   return path.split(/[\\/]/).pop() || 'Unknown'
 }
 
-function buildSystemPrompt(): string {
+/**
+ * Shell-specific suffix: appended to system rules dynamically (NOT cached).
+ * Lightweight enough that it doesn't significantly impact cache efficiency.
+ */
+function getShellGuidance(shellPath?: string, isWindowsShell: boolean): string {
+  if (isWindowsShell) {
+    const isCmd = shellPath?.toLowerCase().includes('cmd')
+    return isCmd
+      ? '\n\nThe active terminal is Windows CMD. Use CMD syntax (dir, cd, type, wmic, etc.).'
+      : '\n\nThe active terminal is Windows PowerShell. Use cmdlets like Get-ChildItem, Set-Location, Get-Content, etc.'
+  }
+  return '\n\nThe active terminal is a Unix-like shell. Use standard Unix syntax (ls, cat, grep, find, etc.).'
+}
+
+/**
+ * Build the dynamic context header injected into the latest user message.
+ * Carries current shell/terminal state WITHOUT polluting the system prompt.
+ */
+function buildDynamicContext(): string {
   const store = useAIStore()
   const activePanel = getActivePanel()
 
-  let base = store.systemPrompt
-  if (!activePanel) return base
+  if (!activePanel) return ''
 
   const parts: string[] = []
-  parts.push(`Current active terminal panel: "${activePanel.title}" (id: ${activePanel.id}, type: ${activePanel.type})`)
-
   const shellPath = activePanel.config?.shellPath
-  if (shellPath) {
-    parts.push(`Current shell: ${getShellName(shellPath)} (${shellPath})`)
-  } else if (activePanel.type === 'ssh') {
-    parts.push(`Current shell: remote SSH session (Unix-like)`)
-  }
+
+  const shellName = shellPath
+    ? getShellName(shellPath)
+    : (activePanel.type === 'ssh' ? 'SSH (Unix-like)' : 'Unknown')
+
+  const isWindowsShell = !!shellPath && (
+    shellPath.toLowerCase().includes('powershell') ||
+    shellPath.toLowerCase().includes('pwsh') ||
+    shellPath.toLowerCase().includes('cmd')
+  )
+
+  const syntaxStyle = isWindowsShell
+    ? (shellPath!.toLowerCase().includes('cmd')
+      ? 'Windows CMD (dir, cd, type, wmic)'
+      : 'Windows PowerShell (cmdlets like Get-ChildItem, Set-Location)')
+    : 'Unix (ls, cat, grep, df, find)'
+
+  parts.push(`========================================`)
+  parts.push(`CURRENT SHELL: ${shellName}`)
+  parts.push(`SYNTAX: ${syntaxStyle}`)
+  parts.push(`PANEL: ${activePanel.title} (id: ${activePanel.id})`)
+  parts.push(`========================================`)
 
   if (activePanel.type === 'ssh' && activePanel.config) {
     parts.push(`Connected to: ${activePanel.config.user}@${activePanel.config.host}:${activePanel.config.port}`)
@@ -90,35 +125,29 @@ function buildSystemPrompt(): string {
 
   // Detect terminal switch and inject explicit notice
   const lastCtx = store.lastPanelContext
-  let switchNotice = ''
   if (lastCtx && lastCtx.panelId !== activePanel.id) {
     const prev = lastCtx.shellPath ? getShellName(lastCtx.shellPath) : 'another terminal'
     const curr = shellPath ? getShellName(shellPath) : (activePanel.type === 'ssh' ? 'SSH' : 'local terminal')
-    switchNotice = `\n\n【TERMINAL SWITCHED】The user has switched from "${prev}" to "${curr}". This is a DIFFERENT terminal environment — previous results (current directory, env vars, files created) may be COMPLETELY INVALID here. You MUST use command syntax appropriate for the NEW terminal type ONLY. Do NOT mix commands from different shell types. Reassess the environment from scratch if needed.`
+    parts.push(`\n【TERMINAL SWITCHED】The user has switched from "${prev}" to "${curr}". This is a DIFFERENT terminal environment. Reassess the environment from scratch.`)
   }
 
-  const isWindowsShell = shellPath && (
+  return parts.join('\n')
+}
+
+/**
+ * Build the system prompt: static rules from store + lightweight shell guidance.
+ * Dynamic context (shell banner, switch notices) goes into the user message.
+ */
+function buildSystemPrompt(): string {
+  const store = useAIStore()
+  const activePanel = getActivePanel()
+  const shellPath = activePanel?.config?.shellPath
+  const isWindowsShell = !!shellPath && (
     shellPath.toLowerCase().includes('powershell') ||
     shellPath.toLowerCase().includes('pwsh') ||
     shellPath.toLowerCase().includes('cmd')
   )
-
-  if (isWindowsShell) {
-    base += '\n\nIMPORTANT: The active terminal is a Windows shell. Use Windows command syntax, not Unix syntax.\n- For PowerShell: use cmdlets like Get-ChildItem, Set-Location, Get-Content, etc.\n- For CMD: use dir, cd, type, etc.'
-  } else if (activePanel.type === 'ssh' || activePanel.type === 'local') {
-    base += '\n\nThe active terminal is a Unix-like shell. Use standard Unix syntax (ls, cat, grep, find, etc.).'
-  }
-
-  // Build a highly-visible current-shell banner at the very top
-  const shellName = shellPath
-    ? getShellName(shellPath)
-    : (activePanel.type === 'ssh' ? 'SSH (Unix-like)' : 'Unknown')
-  const syntaxStyle = isWindowsShell
-    ? (shellPath?.toLowerCase().includes('cmd') ? 'Windows CMD (dir, cd, type, wmic)' : 'Windows PowerShell (cmdlets like Get-ChildItem, Set-Location)')
-    : 'Unix (ls, cat, grep, df, find)'
-  const shellBanner = `========================================\n当前终端 (CURRENT SHELL): ${shellName}\n终端ID (PANEL ID): ${activePanel.id}\n========================================`
-
-  return shellBanner + switchNotice + '\n\n' + base + '\n\n--- Current Context ---\n' + parts.join('\n') + '\n---'
+  return store.systemPrompt + getShellGuidance(shellPath, isWindowsShell)
 }
 
 export async function runAgent(userInput: string) {
@@ -154,18 +183,43 @@ export async function runAgent(userInput: string) {
   store.resetStop()
   store.isRunning = true
 
-  // Record current panel context so buildSystemPrompt can detect terminal switches
+  // Record current panel context so buildDynamicContext can detect terminal switches
   const activePanel = getActivePanel()
   if (activePanel) {
     store.setLastPanelContext(activePanel.id, activePanel.config?.shellPath || '')
   }
 
   if (userInput) {
+    const dynamicCtx = buildDynamicContext()
     store.addMessage({
       id: `msg-${Date.now()}`,
       role: 'user',
-      content: userInput
+      content: userInput,
+      _contextHeader: dynamicCtx || undefined
     })
+  }
+
+  // Track active stream listeners for cleanup
+  let currentAssistantMsg: AIMessage | null = null
+  let cleanupTokenListener: (() => void) | null = null
+
+  // Track whether streaming already delivered text, to skip onChunk duplication
+  let streamedText = ''
+
+  // Register stream event listener (fires from Go backend SSE events)
+  cleanupTokenListener = EventsOn('ai:token', (data: any) => {
+    if (currentAssistantMsg && data.text) {
+      currentAssistantMsg.content += data.text
+      streamedText += data.text
+    }
+  })
+
+  function cleanupStreamListeners() {
+    if (cleanupTokenListener) {
+      cleanupTokenListener()
+      cleanupTokenListener = null
+    }
+    currentAssistantMsg = null
   }
 
   let turnCount = 0
@@ -176,6 +230,7 @@ export async function runAgent(userInput: string) {
 
     if (store.stopRequested) {
       store.isRunning = false
+      cleanupStreamListeners()
       return
     }
 
@@ -184,6 +239,7 @@ export async function runAgent(userInput: string) {
       role: 'assistant',
       content: ''
     })
+    currentAssistantMsg = assistantMsg
 
     const toolUses: Array<{ id: string; name: string; input: Record<string, unknown> }> = []
 
@@ -193,6 +249,7 @@ export async function runAgent(userInput: string) {
       tools: AVAILABLE_TOOLS,
       onChunk: (chunk: string) => {
         if (store.stopRequested) return
+        if (streamedText) return // already handled by ai:token events
         assistantMsg.content += chunk
       },
       onToolUse: (tu: { id: string; name: string; input: Record<string, unknown> }) => {
@@ -218,6 +275,7 @@ export async function runAgent(userInput: string) {
       delete assistantMsg.tool_calls
       store.setDebugInfo(store.conversation, errMsg)
       store.isRunning = false
+      cleanupStreamListeners()
       return
     }
 
@@ -239,6 +297,7 @@ export async function runAgent(userInput: string) {
         }
       }
       store.isRunning = false
+      cleanupStreamListeners()
       return
     }
 
@@ -262,11 +321,13 @@ export async function runAgent(userInput: string) {
     if (!assistantMsg.content && toolUses.length === 0) {
       assistantMsg.content = '[No response received from the model. Check your API settings and network connection.]'
       store.isRunning = false
+      cleanupStreamListeners()
       return
     }
 
     if (toolUses.length === 0) {
       store.isRunning = false
+      cleanupStreamListeners()
       return
     }
 
@@ -328,6 +389,7 @@ export async function runAgent(userInput: string) {
     })
   }
 
+  cleanupStreamListeners()
   store.isRunning = false
   store.doSave()
 }

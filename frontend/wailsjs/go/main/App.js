@@ -10,6 +10,10 @@ export function AddIndex(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['AddIndex'](arg1, arg2, arg3, arg4);
 }
 
+export function CancelChatStream() {
+  return window['go']['main']['App']['CancelChatStream']();
+}
+
 export function ChatCompletion(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['main']['App']['ChatCompletion'](arg1, arg2, arg3, arg4, arg5);
 }

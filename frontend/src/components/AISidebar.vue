@@ -4,6 +4,23 @@
     <div class="ai-header">
       <span>{{ t('ai.title') }}</span>
       <div class="ai-actions">
+        <button class="ai-action-btn" @click="onNewSession" :title="t('ai.newSession')">
+          <el-icon><MessageSquarePlus :size="14" /></el-icon>
+        </button>
+        <el-dropdown v-if="aiStore.sessions.length > 0" trigger="click" @command="onSessionCommand">
+          <button class="ai-action-btn" :title="t('ai.recentSessions')">
+            <el-icon><History :size="14" /></el-icon>
+          </button>
+          <template #dropdown>
+            <el-dropdown-menu class="dark-dropdown">
+              <el-dropdown-item v-for="s in aiStore.sessions" :key="s.id" :command="s.id" :class="{ active: s.id === aiStore.currentSessionId }">
+                <span class="session-item-name">{{ s.name }}</span>
+                <span class="session-time">{{ formatRelativeTime(s.updatedAt) }}</span>
+                <el-icon class="session-delete" @click.stop="aiStore.deleteSession(s.id)"><Trash2 :size="14" /></el-icon>
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
         <button class="ai-action-btn" @click="toggleMaximize" :title="isMaximized ? t('ai.restore') : t('ai.maximize')">
           <el-icon><Shrink v-if="isMaximized" :size="14" /><Expand v-else :size="14" /></el-icon>
         </button>
@@ -11,35 +28,6 @@
           <el-icon><X :size="14" /></el-icon>
         </button>
       </div>
-    </div>
-
-    <div class="ai-session-bar">
-      <el-dropdown trigger="click" @command="onSessionCommand">
-        <div class="session-trigger">
-          <span class="session-name">{{ currentSessionName }}</span>
-          <el-icon><ChevronDown :size="14" /></el-icon>
-        </div>
-        <template #dropdown>
-          <el-dropdown-menu class="dark-dropdown">
-            <el-dropdown-item command="new">
-              <el-icon><Plus :size="14" /></el-icon> {{ t('ai.newSession') }}
-            </el-dropdown-item>
-            <el-dropdown-item divided v-if="aiStore.sessions.length > 0" disabled>
-              {{ t('ai.recentSessions') }}
-            </el-dropdown-item>
-            <el-dropdown-item
-              v-for="s in aiStore.sessions"
-              :key="s.id"
-              :command="s.id"
-              :class="{ active: s.id === aiStore.currentSessionId }"
-            >
-              <span class="session-item-name">{{ s.name }}</span>
-              <span class="session-time">{{ formatRelativeTime(s.updatedAt) }}</span>
-              <el-icon class="session-delete" @click.stop="aiStore.deleteSession(s.id)"><Trash2 :size="14" /></el-icon>
-            </el-dropdown-item>
-          </el-dropdown-menu>
-        </template>
-      </el-dropdown>
     </div>
 
     <div ref="messagesRef" class="ai-messages" @contextmenu="onAIContextMenu">
@@ -51,7 +39,7 @@
         @reject="onReject"
         @continue="onContinue"
       />
-      <div v-if="aiStore.isRunning" class="ai-thinking">
+      <div v-if="aiStore.isRunning && !streamingMsgHasContent" class="ai-thinking">
         <div class="thinking-avatar">{{ t('ai.avatarAI') }}</div>
         <div class="thinking-text">{{ t('ai.thinking') }}</div>
       </div>
@@ -131,13 +119,14 @@
 
 <script setup lang="ts">
 import { ref, nextTick, computed, watch, onMounted, onUnmounted } from 'vue'
-import { X, ChevronDown, Plus, Trash2, Expand, Shrink } from '@lucide/vue'
+import { X, Trash2, Expand, Shrink, History, MessageSquarePlus } from '@lucide/vue'
 import { useAIStore } from '../stores/aiStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useTabStore } from '../stores/tabStore'
 import { usePanelStore } from '../stores/panelStore'
 import { useI18n } from '../i18n'
 import { runAgent, approveTool, rejectTool, continueAgent } from '../services/agent'
+import { CancelChatStream } from '../../wailsjs/go/main/App'
 import type { ExecutionMode } from '../types/ai'
 import AIMessage from './AIMessage.vue'
 
@@ -150,16 +139,21 @@ const input = ref('')
 
 const visibleMessages = computed(() => {
   return aiStore.messages.filter(m => {
-    // Real tool_results (with tool_call_id) are shown via assistant's tool_calls, hide them here
     if (m.role === 'tool' && m.tool_call_id) return false
-    // Display-only tool messages (system errors, no tool_call_id) should be visible
     if (m.role === 'tool' && !m.tool_call_id) return true
     if (m.role !== 'assistant') return true
-    // Also show if this message has a pending command waiting for confirmation
     const hasPending = aiStore.pendingCommand?.messageId === m.id
     return m.content || m.tool_calls?.length || hasPending || m.needsContinue
   })
 })
+// Hide thinking indicator once streaming content arrives
+const streamingMsgHasContent = computed(() => {
+  const msgs = aiStore.messages
+  if (!aiStore.isRunning || msgs.length === 0) return false
+  const last = msgs[msgs.length - 1]
+  return last.role === 'assistant' && !!last.content
+})
+
 const messagesRef = ref<HTMLDivElement>()
 const aiMenuRef = ref<HTMLDivElement>()
 const sidebarWidth = ref(360)
@@ -192,11 +186,6 @@ const aiMenuVisible = ref(false)
 const aiMenuStyle = ref({ left: '0px', top: '0px' })
 const isAtBottom = ref(true)
 let mutationObserver: MutationObserver | null = null
-
-const currentSessionName = computed(() => {
-  const s = aiStore.sessions.find(s => s.id === aiStore.currentSessionId)
-  return s?.name || t('ai.newSession')
-})
 
 const modeLabel = computed(() => {
   switch (aiStore.mode) {
@@ -283,7 +272,6 @@ function closeAIMenu() {
 function onAIContextMenu(e: MouseEvent) {
   e.preventDefault()
   e.stopPropagation()
-  // Close other context menus via global event
   window.dispatchEvent(new CustomEvent('global:close-context-menus'))
   aiMenuStyle.value = fitMenuPosition(e.clientX, e.clientY, 120, 76)
   aiMenuVisible.value = true
@@ -316,12 +304,12 @@ function aiAskSelection() {
   closeAIMenu()
 }
 
-function onSessionCommand(command: string) {
-  if (command === 'new') {
-    aiStore.createSession()
-  } else {
-    aiStore.switchSession(command)
-  }
+function onNewSession() {
+  aiStore.createSession()
+}
+
+function onSessionCommand(sessionId: string) {
+  aiStore.switchSession(sessionId)
 }
 
 watch(() => aiStore.currentSessionId, () => {
@@ -339,7 +327,6 @@ watch(() => aiStore.visible, (visible) => {
 
 function onKeydownEnter(e: KeyboardEvent) {
   if (e.shiftKey) {
-    // Allow default newline behavior
     return
   }
   e.preventDefault()
@@ -357,7 +344,6 @@ async function onSend() {
 
 function onStop() {
   if (aiStore.pendingCommand) {
-    // Just mark the pending command as cancelled — do NOT call the AI
     const cmd = aiStore.pendingCommand
     aiStore.clearPendingCommand()
     aiStore.addMessage({
@@ -368,6 +354,7 @@ function onStop() {
     })
     return
   }
+  CancelChatStream().catch(() => { /* ignore */ })
   aiStore.stop()
 }
 
@@ -489,7 +476,6 @@ onUnmounted(() => {
   transition: background 0.15s ease;
 }
 
-/* Default: same 1px gradient line as the app-header divider, at the edge */
 .resize-handle::before {
   content: '';
   position: absolute;
@@ -508,7 +494,6 @@ onUnmounted(() => {
   transition: opacity 0.15s;
 }
 
-/* Hover: 3px accent bar (same as original) */
 .resize-handle:hover::after {
   content: '';
   position: absolute;

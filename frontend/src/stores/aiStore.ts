@@ -5,43 +5,76 @@ import { SaveAIConfig, LoadAIConfig, SaveAISessions, LoadAISessions } from '../.
 import { EventsOn } from '../../wailsjs/runtime'
 import { t } from '../i18n'
 
-const SYSTEM_PROMPT = `You are an AI assistant inside uniTerm, a terminal emulator. You can execute shell commands in the user's active terminal to help them complete tasks.
+/**
+ * Estimate token count for a string using character-based heuristics.
+ * ASCII/English: ~3.5 chars per token. CJK/non-ASCII: ~1.8 chars per token.
+ * Accurate to within ~15% for typical mixed content.
+ */
+function estimateTokens(text: string): number {
+  let asciiChars = 0
+  let nonAsciiChars = 0
+  for (let i = 0; i < text.length; i++) {
+    if (text.charCodeAt(i) <= 0x7f) {
+      asciiChars++
+    } else {
+      nonAsciiChars++
+    }
+  }
+  return Math.ceil(asciiChars / 3.5 + nonAsciiChars / 1.8)
+}
+
+/**
+ * Estimate tokens for an AIMessage, including content, tool_calls, and
+ * serialized _rawApiMsg.
+ */
+function estimateMessageTokens(msg: AIMessage): number {
+  let total = estimateTokens(msg.content)
+  if (msg.tool_calls) {
+    for (const tc of msg.tool_calls) {
+      total += estimateTokens(tc.function.name)
+      total += estimateTokens(tc.function.arguments)
+    }
+  }
+  if (msg._rawApiMsg) {
+    total += estimateTokens(JSON.stringify(msg._rawApiMsg))
+  }
+  return total
+}
+
+/**
+ * Static AI system rules — immutable per app version, always cacheable.
+ * Dynamic shell/panel context is injected into the latest user message instead.
+ */
+const SYSTEM_RULES = `You are an AI assistant inside uniTerm, a terminal emulator. You can execute shell commands in the user's active terminal to help them complete tasks.
 
 When you need to run a command, use the execute_command tool. The command will be executed in the active terminal session and you will receive its stdout/stderr output.
 
 CRITICAL RULES:
 - You can only send ONE execute_command tool call at a time. Never send multiple tool calls in a single response.
 - Always explain what you are about to do before executing commands.
-- Use commands appropriate for the current shell (the shell type will be provided in the context below).
 - If a command might be destructive, warn the user.
 - Chain multiple commands with && or ; when appropriate.
 - If the output is too long, summarize the key findings.
-- Commands have a 60-second timeout. If a command times out, you will see "[Command timed out after 60s...]". In that case, you can either wait (the command may still be running) or suggest canceling it with Ctrl+C.
-- Do NOT send a new command if the previous one might still be running, unless you intend to cancel it first.
-- At the START of EVERY response, you MUST read the "当前终端 (CURRENT SHELL)" line at the very top of this prompt. IGNORE any memory of what the previous shell was — only the CURRENT SHELL line matters. Do NOT assume the shell type based on previous turns.
-- The user may switch terminal tabs at any time. Each terminal is an independent environment with its own working directory, environment variables, and file system state. Previous command results (like current directory, env vars, created files) may be COMPLETELY INVALID in the new terminal. ALWAYS reassess the environment before proceeding.
-- When the terminal program type changes (e.g. PowerShell -> Git Bash, or CMD -> PowerShell), you MUST immediately switch to the NEW shell's command syntax. NEVER mix commands from different shell types in the same response. The current shell type is shown at the top of this prompt and takes ABSOLUTE PRECEDENCE over any previous turns or your memory.
-- Do NOT invoke a different shell executable (e.g. powershell.exe, cmd.exe, bash.exe, pwsh.exe, wsl.exe) from within the current terminal to run commands. ALWAYS use the native syntax of the CURRENT shell only. For example, if the current shell is Git Bash, do NOT run "powershell.exe -Command ..." or "cmd /c ..."; use bash-native commands like "df -h" or "ls -la" instead. If a native equivalent does not exist, use the closest native workaround rather than spawning another shell.
+- Commands have a 60-second timeout.
+- At the START of EVERY response, read the shell/panel context in the user's message. IGNORE any memory of what the previous shell was — only the latest context matters.
+- The user may switch terminal tabs at any time. Each terminal is an independent environment. ALWAYS reassess before proceeding.
+- When the terminal type changes, switch to the NEW shell's command syntax immediately. NEVER mix commands from different shell types.
+- Do NOT invoke a different shell executable from within the current terminal. ALWAYS use the native syntax of the CURRENT shell only.
 
 RISK CLASSIFICATION:
-Every execute_command call MUST include a "risk" field. Classify each command honestly:
-- "read": only inspects/views data, no modifications at all (ls, cat, grep, head, tail, df, du, ps, top, find, pwd, whoami, git status/log/diff, docker ps/images/logs, npm list, pip list, go version/env, etc.)
-- "write": modifies or creates data, but not system-destructive (echo > file, touch, mkdir, cp, mv, git add/commit/push, curl POST, npm install, pip install, apt install, brew install, etc.)
-- "dangerous": potentially destructive or system-altering (rm, > overwrite important files, chmod, chown, shutdown, reboot, mkfs, dd, force push, kill -9, etc.)
-
-For chained commands with && or ;, classify based on the MOST risky operation in the chain.
+Every execute_command call MUST include a "risk" field:
+- "read": only inspects/views data, no modifications at all
+- "write": modifies or creates data, but not system-destructive
+- "dangerous": potentially destructive or system-altering
+For chained commands, classify based on the MOST risky operation in the chain.
 
 --- NEGATIVE EXAMPLES (STRICTLY FORBIDDEN) ---
-You MUST NEVER do the following. These are common mistakes caused by relying on memory instead of reading the CURRENT SHELL line:
 ❌ In Git Bash, do NOT run: Get-CimInstance Win32_LogicalDisk
 ❌ In PowerShell, do NOT run: ls -la /mnt/c/
 ❌ In CMD, do NOT run: df -h
 ❌ In Git Bash, do NOT run: powershell.exe -Command "..."
 ❌ In PowerShell, do NOT run: bash -c "..."
-If the native equivalent does not exist in the CURRENT shell, find a workaround using ONLY the CURRENT shell's syntax.
-
---- VIOLATION CONSEQUENCE ---
-If you use command syntax from a shell type that does NOT match the CURRENT SHELL, the command will be treated as INVALID. You MUST stop, re-read the CURRENT SHELL line at the top, and rewrite the command using the correct syntax. Do NOT attempt to bypass this by spawning another interpreter (e.g. bash -c, powershell.exe -Command, cmd /c).`
+Use ONLY the current shell's native syntax.`
 
 const DEFAULT_CONFIG: AIConfig = {
   apiKey: '',
@@ -303,10 +336,28 @@ export const useAIStore = defineStore('ai', () => {
 
   // Build Anthropic-native message array (system is separate top-level field)
   const conversation = computed(() => {
-    const MAX_CTX_MSGS = 50
+    // Token budget: 80% of Claude's 200K context window, minus headroom
+    const MAX_CONTEXT_TOKENS = 160000
 
-    // Take only recent messages to stay within context window
-    let recentMsgs = messages.value.slice(-MAX_CTX_MSGS)
+    // Estimate static overhead (cached, counted once)
+    // Tools definition is small and static (~1KB); hardcode estimate to avoid
+    // a circular dependency on llm.ts
+    const systemTokens = estimateTokens(SYSTEM_RULES)
+    const toolsTokens = 250  // ~1KB execute_command tool definition
+    let tokenCount = systemTokens + toolsTokens
+
+    // Walk backwards through messages, accumulate token estimates.
+    // Stop when we exceed the budget.
+    const kept: typeof messages.value = []
+    for (let i = messages.value.length - 1; i >= 0; i--) {
+      const msg = messages.value[i]
+      const msgTokens = estimateMessageTokens(msg)
+      if (tokenCount + msgTokens > MAX_CONTEXT_TOKENS) break
+      tokenCount += msgTokens
+      kept.unshift(msg)
+    }
+
+    let recentMsgs = kept
 
     // Don't start the conversation with an orphaned tool_result whose matching
     // tool_use was truncated out of the window. Strip leading tool messages
@@ -386,7 +437,13 @@ export const useAIStore = defineStore('ai', () => {
       // Skip empty assistant messages (no content, no tool calls, no raw api msg, no pending tools)
       if (m.role === 'assistant' && !m.content && !(m.pendingTools?.length || pendingCommand.value?.messageId === m.id)) continue
 
-      result.push({ role: m.role, content: m.content })
+      // Inject dynamic context header into user messages for the API
+      // (hidden from UI, stored in _contextHeader)
+      if (m.role === 'user' && m._contextHeader) {
+        result.push({ role: m.role, content: m._contextHeader + '\n\n' + m.content })
+      } else {
+        result.push({ role: m.role, content: m.content })
+      }
     }
 
     // Final safety pass: enforce that every tool_use is immediately followed
@@ -446,10 +503,13 @@ export const useAIStore = defineStore('ai', () => {
       }
     }
 
+    // Messages are inherently dynamic — no cache_control breakpoints here.
+    // Caching is handled entirely on the system prompt (see llm.ts).
+
     return deduped
   })
 
-  const systemPrompt = computed(() => SYSTEM_PROMPT)
+  const systemPrompt = computed(() => SYSTEM_RULES)
 
   // Reload AI config when settings change via sync
   EventsOn('store:settings:changed', () => {
