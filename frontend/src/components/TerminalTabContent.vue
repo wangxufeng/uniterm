@@ -7,7 +7,7 @@
   >
     <Panel
       v-if="panel"
-      :key="tab.panelId"
+      :key="`${tab.panelId}-${tab.id}`"
       :panel="panel"
       :show-header="false"
       :is-active="true"
@@ -27,6 +27,8 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'TerminalTabContent' })
+
 import { computed, ref, nextTick } from 'vue'
 import { usePanelStore } from '../stores/panelStore'
 import { useTabStore } from '../stores/tabStore'

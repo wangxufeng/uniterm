@@ -62,8 +62,8 @@ export function ExecuteStatement(arg1, arg2, arg3) {
   return window['go']['main']['App']['ExecuteStatement'](arg1, arg2, arg3);
 }
 
-export function FetchModels(arg1, arg2) {
-  return window['go']['main']['App']['FetchModels'](arg1, arg2);
+export function FrontendLog(arg1, arg2) {
+  return window['go']['main']['App']['FrontendLog'](arg1, arg2);
 }
 
 export function GetAppInfo() {
@@ -186,6 +186,10 @@ export function RDPShow(arg1) {
   return window['go']['main']['App']['RDPShow'](arg1);
 }
 
+export function ReadFileBase64(arg1) {
+  return window['go']['main']['App']['ReadFileBase64'](arg1);
+}
+
 export function RemoveTempFile(arg1) {
   return window['go']['main']['App']['RemoveTempFile'](arg1);
 }
@@ -214,12 +218,24 @@ export function SaveTerminalHistory(arg1) {
   return window['go']['main']['App']['SaveTerminalHistory'](arg1);
 }
 
+export function SessionEndZmodem(arg1) {
+  return window['go']['main']['App']['SessionEndZmodem'](arg1);
+}
+
 export function SessionResize(arg1, arg2, arg3) {
   return window['go']['main']['App']['SessionResize'](arg1, arg2, arg3);
 }
 
+export function SessionStartZmodem(arg1) {
+  return window['go']['main']['App']['SessionStartZmodem'](arg1);
+}
+
 export function SessionWrite(arg1, arg2) {
   return window['go']['main']['App']['SessionWrite'](arg1, arg2);
+}
+
+export function SessionWriteBinary(arg1, arg2) {
+  return window['go']['main']['App']['SessionWriteBinary'](arg1, arg2);
 }
 
 export function SetMonitorActiveTab(arg1, arg2) {
@@ -340,6 +356,10 @@ export function SyncVerifyPassword(arg1, arg2, arg3) {
 
 export function TruncateTable(arg1, arg2, arg3) {
   return window['go']['main']['App']['TruncateTable'](arg1, arg2, arg3);
+}
+
+export function WriteFileBase64(arg1, arg2) {
+  return window['go']['main']['App']['WriteFileBase64'](arg1, arg2);
 }
 
 export function WriteTempFile(arg1, arg2) {

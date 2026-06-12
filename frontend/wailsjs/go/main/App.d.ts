@@ -36,7 +36,7 @@ export function ExecuteQuery(arg1:string,arg2:string,arg3:string):Promise<databa
 
 export function ExecuteStatement(arg1:string,arg2:string,arg3:string):Promise<database.ExecResult>;
 
-export function FetchModels(arg1:string,arg2:string):Promise<Array<main.ModelInfo>>;
+export function FrontendLog(arg1:string,arg2:string):Promise<void>;
 
 export function GetAppInfo():Promise<main.AppInfo>;
 
@@ -98,6 +98,8 @@ export function RDPSetPosition(arg1:string,arg2:number,arg3:number,arg4:number,a
 
 export function RDPShow(arg1:string):Promise<void>;
 
+export function ReadFileBase64(arg1:string):Promise<string>;
+
 export function RemoveTempFile(arg1:string):Promise<void>;
 
 export function SaveAIConfig(arg1:store.AIConfig):Promise<void>;
@@ -112,9 +114,15 @@ export function SaveSettings(arg1:store.AppSettings):Promise<void>;
 
 export function SaveTerminalHistory(arg1:Array<store.HistoryEntry>):Promise<void>;
 
+export function SessionEndZmodem(arg1:string):Promise<void>;
+
 export function SessionResize(arg1:string,arg2:number,arg3:number):Promise<void>;
 
+export function SessionStartZmodem(arg1:string):Promise<void>;
+
 export function SessionWrite(arg1:string,arg2:string):Promise<void>;
+
+export function SessionWriteBinary(arg1:string,arg2:string):Promise<void>;
 
 export function SetMonitorActiveTab(arg1:string,arg2:string):Promise<void>;
 
@@ -175,5 +183,7 @@ export function SyncTestConnection():Promise<void>;
 export function SyncVerifyPassword(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function TruncateTable(arg1:string,arg2:string,arg3:string):Promise<void>;
+
+export function WriteFileBase64(arg1:string,arg2:string):Promise<void>;
 
 export function WriteTempFile(arg1:string,arg2:string):Promise<string>;

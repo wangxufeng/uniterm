@@ -21,6 +21,8 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'WorkspaceContent' })
+
 import { useTabStore } from '../stores/tabStore'
 import { usePanelStore } from '../stores/panelStore'
 import type { WorkspaceTab } from '../types/workspace'
@@ -61,13 +63,13 @@ async function onDuplicatePanel(panelId: string) {
   )
   newPanel.title = panel.title
 
-  const newTab = tabStore.createTerminalTab(panel.title, newPanel.id)
-  panelStore.movePanelToTab(newPanel.id, newTab.id)
-
   if (panel.config) {
     try {
       const info = await CreateSession(panel.config.type, panel.config)
       panelStore.bindSession(newPanel.id, info.id)
+      // Create tab AFTER session is bound, so BaseTerminal mounts with valid sessionId
+      const newTab = tabStore.createTerminalTab(panel.title, newPanel.id)
+      panelStore.movePanelToTab(newPanel.id, newTab.id)
     } catch (e) {
       console.error('Failed to duplicate session:', e)
     }

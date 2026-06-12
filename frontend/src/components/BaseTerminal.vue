@@ -1,6 +1,16 @@
 <template>
-  <div class="base-terminal">
+  <div
+    class="base-terminal"
+    @dragover.prevent="onDragOver"
+    @dragenter.prevent="onDragEnter"
+    @dragleave="onDragLeave"
+    @drop="onDragDrop"
+  >
     <div ref="terminalRef" class="terminal-area" @contextmenu="menu.onContextMenu"></div>
+
+    <div v-if="dragOver" class="drop-overlay">
+      <span>{{ t('sftp.dropHere') }}</span>
+    </div>
 
     <!-- Search bar -->
     <div v-show="searchVisible" class="terminal-search-bar">
@@ -55,18 +65,20 @@
       @hover="(idx: number) => suggestions.state.value.selectedIndex = idx"
       @remove="(id: string) => suggestions.removeHistoryCommandById(id)"
     />
+
+    <!-- Zmodem transfer panel -->
+    <ZmodemTransfer :session-id="props.sessionId || ''" @cancel="onZmodemCancel" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { Terminal } from '@xterm/xterm'
-import { FitAddon } from '@xterm/addon-fit'
-import { Unicode11Addon } from '@xterm/addon-unicode11'
-import { SearchAddon } from '@xterm/addon-search'
+import { ref, onMounted, onBeforeUnmount, onUnmounted, onActivated, onDeactivated, watch, nextTick } from 'vue'
+import type { Terminal } from '@xterm/xterm'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import '@xterm/xterm/css/xterm.css'
-import { SessionWrite, SessionResize } from '../../wailsjs/go/main/App'
+import { SessionWrite, SessionResize, SessionEndZmodem } from '../../wailsjs/go/main/App'
+import { WriteTempFile } from '../../wailsjs/go/main/App'
+import { FrontendLog } from '../../wailsjs/go/main/App'
 import { EventsOn, BrowserOpenURL } from '../../wailsjs/runtime'
 import { useSettingsStore } from '../stores/settingsStore'
 import { highlight } from '../composables/useHighlight'
@@ -75,10 +87,20 @@ import { useTabStore } from '../stores/tabStore'
 import { usePanelStore } from '../stores/panelStore'
 import { useTerminalMenu } from '../composables/useTerminalMenu'
 import { useI18n } from '../i18n'
+import {
+  acquireTerminal,
+  releaseTerminal,
+  attachTerminal,
+  detachTerminal,
+  getManagedTerminal,
+} from '../services/terminalManager'
 import { getXtermTheme } from '../composables/useTerminal'
 import { useTerminalInput } from '../composables/useTerminalInput'
 import { useSuggestions } from '../composables/useSuggestions'
 import TerminalSuggestion from './TerminalSuggestion.vue'
+import { startZmodemService } from '../services/zmodemService'
+import { useZmodemStore } from '../stores/zmodemStore'
+import ZmodemTransfer from './ZmodemTransfer.vue'
 
 const props = defineProps<{
   mode: 'ssh' | 'sftp' | 'local'
@@ -93,16 +115,33 @@ const settingsStore = useSettingsStore()
 const sessionStore = useSessionStore()
 const tabStore = useTabStore()
 const panelStore = usePanelStore()
+const zmodemStore = useZmodemStore()
 const { t } = useI18n()
+
+// Prevent deactivated (KeepAlive-cached) components from processing
+// terminal events. Only the active component should handle input/output.
+const isActive = ref(true)
+
+// Unique ref per BaseTerminal instance, so each instance independently
+// contributes to the TerminalManager ref count. Without this, two instances
+// rendering the same panel (e.g. KeepAlive'd tab + workspace panel) share
+// the same panelId ref, and one release drops the count to zero.
+const terminalInstanceRef = crypto.randomUUID?.() ||
+  Math.random().toString(36).slice(2, 10) +
+  Date.now().toString(36)
 
 const terminalRef = ref<HTMLDivElement>()
 const searchInputRef = ref<HTMLInputElement>()
 const searchVisible = ref(false)
+
+const dragOver = ref(false)
+let dragEnterCount = 0
+
 const suggestions = useSuggestions()
 let terminalInput: ReturnType<typeof useTerminalInput> | null = null
 let terminal: Terminal | null = null
-let fitAddon: FitAddon | null = null
-let searchAddon: SearchAddon | null = null
+let onDataDispose: { dispose(): void } | null = null
+let keyHandlerDispose: { dispose(): void } | null = null
 let resizeObserver: ResizeObserver | null = null
 let intersectionObserver: IntersectionObserver | null = null
 let unsubscribe: (() => void) | null = null
@@ -116,27 +155,193 @@ let isResizing = false
 let splitResizing = false
 let suppressResizeUntil = 0
 let retryOnEnter = false
+let zmodemService: ReturnType<typeof startZmodemService> | null = null
+let isZmodemStarting = false
+let zmodemStartTimer: ReturnType<typeof setTimeout> | null = null
+let zmodemDirection: 'upload' | 'download' | undefined = undefined
+let zmodemCancellingUntil = 0
+
+function initZmodemService(sessionId: string) {
+  if (!sessionId || props.mode !== 'ssh') return
+  // Don't create a duplicate zmodem service if a transfer is already
+  // active for this session. The existing service (in a deactivated
+  // BaseTerminal) continues to handle the transfer.
+  if (zmodemStore.getActiveTransfer(sessionId)) return
+  zmodemService = startZmodemService({
+    // Register abort so any BaseTerminal component can cancel the transfer
+    onRegister: (abort) => zmodemStore.registerAbort(sessionId, abort),
+    sessionId,
+    direction: zmodemDirection,
+    onComplete: (files, hint) => {
+      if (files.length > 0) {
+        terminal?.write(`\r\n\x1b[32mZmodem: ${files.length} file(s) transferred\x1b[0m\r\n`)
+      }
+      if (hint) {
+        terminal?.write(`\r\n\x1b[33m${hint}\x1b[0m\r\n`)
+      }
+      if (files.length === 0 && !hint) {
+        // 取消或未选择文件：打印提示
+        terminal?.write(`\r\n\x1b[33mZmodem transfer cancelled\x1b[0m\r\n`)
+        // 等吞数据保护过期后再发送一次回车，确保 sz 已退出、bash 恢复前台后触发提示符
+        const cancelUntil = Math.max(zmodemCancellingUntil, zmodemStore.getCancelUntil(sessionId))
+        const remaining = Math.max(0, cancelUntil - Date.now())
+        setTimeout(() => {
+          SessionWrite(sessionId, '\n').catch(() => {})
+        }, remaining + 100)
+      }
+      zmodemStore.clearTransfers(sessionId)
+      zmodemDirection = undefined
+      disposeZmodemService(sessionId)
+      initZmodemService(sessionId)
+    },
+    onError: (err) => {
+      terminal?.write(`\r\n\x1b[31mZmodem error: ${err}\x1b[0m\r\n`)
+      zmodemStore.clearTransfers(sessionId)
+      zmodemDirection = undefined
+      disposeZmodemService(sessionId)
+      initZmodemService(sessionId)
+    },
+  })
+}
+
+async function disposeZmodemService(sessionId: string, resetDirection = true, endSession = true) {
+  zmodemService?.dispose()
+  zmodemService = null
+  isZmodemStarting = false
+  if (resetDirection) {
+    zmodemDirection = undefined
+  }
+  if (zmodemStartTimer) {
+    clearTimeout(zmodemStartTimer)
+    zmodemStartTimer = null
+  }
+  if (sessionId && endSession) {
+    await SessionEndZmodem(sessionId).catch(() => {})
+  }
+}
+
+// Native file drop handler (Wails provides real file paths via the OS,
+// bypassing WebView2's File.path limitation).
+let fileDropRegistered = false
+
+function onDragOver(e: DragEvent) {
+  if (!e.dataTransfer?.types.includes('Files')) return
+  e.stopPropagation()
+  e.dataTransfer.dropEffect = 'copy'
+  dragOver.value = true
+}
+
+function onDragEnter(e: DragEvent) {
+  if (!e.dataTransfer?.types.includes('Files')) return
+  e.stopPropagation()
+  dragEnterCount++
+  dragOver.value = true
+}
+
+function onDragLeave() {
+  dragEnterCount--
+  if (dragEnterCount <= 0) {
+    dragEnterCount = 0
+    dragOver.value = false
+  }
+}
+
+function onDragDrop(e: DragEvent) {
+  dragOver.value = false
+  dragEnterCount = 0
+  const files = e.dataTransfer?.files
+  if (!files || files.length === 0 || !props.sessionId) return
+
+  // Reject internal panel/tab drags — let them bubble to workspace handlers
+  if (e.dataTransfer?.types.includes('application/panel-id') ||
+      e.dataTransfer?.types.includes('application/tab-id')) return
+
+  e.preventDefault()
+  handleDroppedFiles(props.sessionId, Array.from(files))
+}
+
+async function handleDroppedFiles(sessionId: string, files: File[]) {
+  const paths: string[] = []
+  for (const f of files) {
+    const nativePath = (f as any).path as string | undefined
+    if (nativePath) {
+      paths.push(nativePath)
+    } else {
+      try {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve((reader.result as string).split(',')[1])
+          reader.onerror = () => reject(reader.error)
+          reader.readAsDataURL(f)
+        })
+        paths.push(await WriteTempFile(f.name, base64))
+      } catch (err) {
+        terminal?.write(`\r\n\x1b[33mFailed to read "${f.name}": ${err}\x1b[0m\r\n`)
+      }
+    }
+  }
+  if (paths.length === 0) return
+
+  zmodemStore.setPendingUploadFiles(sessionId, paths)
+  SessionWrite(sessionId, 'rz -be\n')
+}
+
+function onZmodemCancel() {
+  const ts = Date.now() + 2000
+  zmodemCancellingUntil = ts
+  if (props.sessionId) {
+    zmodemStore.setCancelUntil(props.sessionId, ts)
+    zmodemStore.abortTransfer(props.sessionId)
+  }
+}
 
 // Search state
 const searchText = ref('')
 const searchResultIndex = ref(0)
 const searchResultCount = ref(0)
 
+function sanitizeTerminalHistory(text: string): string {
+  if (!text) return text
+  let cleaned = text
+  // ZModem HEX header fragments
+  cleaned = cleaned.replace(/\*{2,}(?:\x18)?[ABC][0-9a-fA-F]{10,}/g, '')
+  // ZModem ZDLE (0x18) and backspace (0x08) sequences
+  cleaned = cleaned.replace(/\x18+/g, '')
+  cleaned = cleaned.replace(/\x08+/g, '')
+  // ASCII control chars except \n, \r, \t and ESC
+  cleaned = cleaned.replace(/[\x00-\x08\x0b\x0c\x0e-\x1a\x1c-\x1f\x7f]/g, '')
+  // Drop binary garbage decoded as random Unicode blocks. Keep ASCII plus CJK
+  // so normal Chinese/Japanese/Korean terminal output is preserved.
+  cleaned = cleaned.replace(/[^\x00-\x7f一-鿿぀-ゟ゠-ヿ가-힯]/g, '')
+  // Collapse blank lines left by removed garbage
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n')
+  // Forward debug info to backend log so we can inspect the raw garbage.
+  if (cleaned !== text) {
+    FrontendLog('sanitizeTerminalHistory', `raw last 400: ${JSON.stringify(text.slice(-400))}`)
+    FrontendLog('sanitizeTerminalHistory', `cleaned last 400: ${JSON.stringify(cleaned.slice(-400))}`)
+  }
+  return cleaned
+}
+
 // SFTP line buffer
 let inputBuffer = ''
 
 function getTerminalOptions() {
   const ts = settingsStore.settings.terminal
-  const themeName = ts.theme || 'dark'
   return {
     fontSize: ts.fontSize || 13,
     fontFamily: ts.fontFamily || 'Consolas, "Courier New", monospace',
-    theme: getXtermTheme(themeName),
-    cursorBlink: true,
-    rightClickSelectsWord: false,
+    themeName: ts.theme || 'dark',
     scrollback: ts.maxHistoryLines || 2500,
-    allowProposedApi: true
   }
+}
+
+function getFitAddon() {
+  return props.sessionId ? getManagedTerminal(props.sessionId)?.fitAddon : undefined
+}
+
+function getSearchAddon() {
+  return props.sessionId ? getManagedTerminal(props.sessionId)?.searchAddon : undefined
 }
 
 function getSelection(): string {
@@ -175,11 +380,16 @@ async function applySuggestion(item: ReturnType<typeof suggestions.getSelectedIt
 function resize() {
   if (props.mode === 'ssh' || props.mode === 'local') {
     const sid = props.sessionId
-    if (!terminal || !fitAddon || !sid) return
+    if (!terminal || !sid) return
+    const fitAddon = getFitAddon()
+    if (!fitAddon) return
     const el = terminalRef.value
     if (!el) return
 
     const rect = el.getBoundingClientRect()
+    // Skip resize when the component is hidden (e.g. during tab switching
+    // with KeepAlive). A zero-size resize would corrupt xterm.js buffers.
+    if (rect.width === 0 || rect.height === 0) return
     let cellWidth = 0
     let cellHeight = 0
     try {
@@ -213,7 +423,7 @@ function resize() {
       SessionResize(sid, newCols, newRows).catch(() => {})
     }
   } else {
-    fitAddon?.fit()
+    getFitAddon()?.fit()
   }
 }
 
@@ -263,16 +473,32 @@ function onSplitResizeEnd() {
   })
 }
 
+// Strip OSC sequences that xterm.js generates internally (color queries etc.)
+// and, in normal screen, also strip CSI responses (CPR, DA, window size,
+// focus events) that the remote shell may echo back as garbage.
+function filterTerminalInput(input: string, inAlternateScreen: boolean): string {
+  // OSC sequences: ESC ] ... BEL or ESC ] ... ESC \
+  let filtered = input.replace(/\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g, '')
+  if (inAlternateScreen) {
+    return filtered
+  }
+  // Normal screen: strip terminal-generated CSI responses.
+  // Covers CPR (R), status report (n), window/cell size (t),
+  // device attributes (c), and focus in/out (I/O).
+  filtered = filtered.replace(/\x1b\[(?:[?>][\d;]*|[\d;]*)([RntcIO])/g, '')
+  return filtered
+}
+
+let bindListeners: (() => void) | null = null
+
 onMounted(() => {
   if (!terminalRef.value) return
 
-  terminal = new Terminal(getTerminalOptions())
-  fitAddon = new FitAddon()
-  terminal.loadAddon(fitAddon)
-  terminal.loadAddon(new Unicode11Addon())
-  try { terminal.unicode.activeVersion = '11' } catch (_) {}
+  // Acquire shared terminal from manager (or create if first mount)
+  const opts = getTerminalOptions()
+  terminal = acquireTerminal(props.sessionId || '', terminalInstanceRef, opts)
 
-  // Web links addon
+  // Load WebLinksAddon per-component (has custom callbacks)
   let hoverEl: HTMLDivElement | null = null
   const webLinksAddon = new WebLinksAddon(
     (event, uri) => {
@@ -302,17 +528,22 @@ onMounted(() => {
   )
   terminal.loadAddon(webLinksAddon)
 
-  // Search addon
-  searchAddon = new SearchAddon()
-  terminal.loadAddon(searchAddon)
-  searchAddon.onDidChangeResults((e) => {
-    searchResultIndex.value = e.resultIndex
-    searchResultCount.value = e.resultCount
-  })
+  // Unicode 11 support
+  try { terminal.unicode.activeVersion = '11' } catch (_) {}
 
-  terminal.open(terminalRef.value)
-  void terminalRef.value.offsetHeight
-  fitAddon.fit()
+  // Set up search results listener from shared SearchAddon
+  const managed = getManagedTerminal(props.sessionId || '')
+  if (managed) {
+    managed.searchAddon.onDidChangeResults((e) => {
+      searchResultIndex.value = e.resultIndex
+      searchResultCount.value = e.resultCount
+    })
+  }
+
+  // Attach terminal DOM to this component's container
+  attachTerminal(props.sessionId || '', terminalRef.value)
+
+  initZmodemService(props.sessionId || '')
 
   // Initialize terminal input handling for SSH
   if (props.mode === 'ssh') {
@@ -335,10 +566,13 @@ onMounted(() => {
   }
 
   if (props.mode === 'ssh' || props.mode === 'local') {
-    // Restore terminal content from session buffer
+    // Restore terminal content from session buffer on first mount only.
+    // Subsequent mounts reuse the shared terminal whose buffer already
+    // contains the correct content.
     const sid = props.sessionId
-    if (sid) {
-      const history = sessionStore.getData(sid)
+    const isNewTerminal = managed?.isNew
+    if (sid && isNewTerminal) {
+      const history = sanitizeTerminalHistory(sessionStore.getData(sid))
       if (history) {
         // Apply syntax highlighting when restoring history so it matches
         // newly arriving lines after a tab switch.
@@ -347,43 +581,64 @@ onMounted(() => {
       }
     }
     // Force initial resize with retries — needed because cell dimensions
-    // may not be available immediately.
-    ;[100, 200, 400, 800, 1500].forEach(d => setTimeout(() => {
-      if (!terminal || terminal.cols <= 0 || terminal.rows <= 0) {
-        fitAddon?.fit()
-      }
+    // may not be available immediately, and for reused terminals the cols/rows
+    // may hold stale dimensions from the previous container.
+    ;[50, 150, 300, 600, 1000, 2000].forEach(d => setTimeout(() => {
+      if (!terminal) return
+      const el = terminalRef.value
+      const inDOM = el ? document.contains(el) : false
+      const hasXterm = el?.querySelector('.xterm') ? true : false
+      const kids = el?.children.length ?? 0
+      const rect = el?.getBoundingClientRect()
+      getFitAddon()?.fit()
       const sessionId = props.sessionId
-      if (sessionId && terminal && terminal.cols > 0 && terminal.rows > 0) {
+      if (sessionId && terminal.cols > 0 && terminal.rows > 0) {
         SessionResize(sessionId, terminal.cols, terminal.rows).catch(() => {})
       }
     }, d))
   }
 
-  // Strip OSC sequences that xterm.js generates internally (color queries etc.)
-  // and, in normal screen, also strip CSI responses (CPR, DA, window size,
-  // focus events) that the remote shell may echo back as garbage.
-  function filterTerminalInput(input: string, inAlternateScreen: boolean): string {
-    // OSC sequences: ESC ] ... BEL or ESC ] ... ESC \
-    let filtered = input.replace(/\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g, '')
-    if (inAlternateScreen) {
-      return filtered
-    }
-    // Normal screen: strip terminal-generated CSI responses.
-    // Covers CPR (R), status report (n), window/cell size (t),
-    // device attributes (c), and focus in/out (I/O).
-    filtered = filtered.replace(/\x1b\[(?:[?>][\d;]*|[\d;]*)([RntcIO])/g, '')
-    return filtered
-  }
+  // Bind per-component listeners (onData, keyHandler).
+  // Called from onMounted and onActivated; disposed in onDeactivated.
+  bindListeners = () => {
+    // Dispose previous listeners before re-registering
+    onDataDispose?.dispose()
+    onDataDispose = null
+    keyHandlerDispose?.dispose()
+    keyHandlerDispose = null
 
-  // Input handling
-  terminal.onData((data) => {
-    if (props.mode === 'ssh' || props.mode === 'local') {
+    // Input handling
+    onDataDispose = terminal.onData((data) => {
+      if (props.mode === 'ssh' || props.mode === 'local') {
       if (retryOnEnter && (data === '\r' || data === '\n')) {
         retryOnEnter = false
         if (props.onSessionStatus) {
           props.onSessionStatus('retry')
         }
         return
+      }
+
+      // Detect rz/sz command to hint zmodem transfer direction.
+      // Must happen BEFORE terminalInput.handleInput because handleInput
+      // clears the line buffer on Enter.
+      if ((data === '\r' || data === '\n') && terminalInput && !terminalInput.isInAlternateScreen()) {
+        const line = terminalInput.lineBuffer.value.trim()
+        if (/^(?:sudo\s+)?rz\b/.test(line)) {
+          zmodemDirection = 'upload'
+          // Recreate the zmodem service so on_detect sees the new direction.
+          if (props.sessionId) {
+            disposeZmodemService(props.sessionId, false).then(() => {
+              initZmodemService(props.sessionId)
+            })
+          }
+        } else if (/^(?:sudo\s+)?sz\b/.test(line)) {
+          zmodemDirection = 'download'
+          if (props.sessionId) {
+            disposeZmodemService(props.sessionId, false).then(() => {
+              initZmodemService(props.sessionId)
+            })
+          }
+        }
       }
 
       // Handle suggestions input (skip in alternate screen apps like vim/k9s)
@@ -481,6 +736,8 @@ onMounted(() => {
     }
   })
 
+  } // end bindListeners
+
   // Selection action: copy on mouse up (only when a new selection was made).
   // Use mouseDownOnThisTerminal to ensure copy only fires when the user
   // actually started selecting inside this terminal. Without this, clicking
@@ -523,7 +780,58 @@ onMounted(() => {
 
   // Session data
   unsubscribe = EventsOn('session:data', (payload: { id: string; data: string }) => {
+    if (!isActive.value) return
     if (payload.id !== props.sessionId || !terminal) return
+
+    // 取消后 2 秒内吞掉所有数据，防止残余二进制乱码
+    if (Date.now() < zmodemCancellingUntil) {
+      return
+    }
+
+    // tab 切换后服务还没重建，但 store 里还有活跃传输（旧的 handleReceive 还在跑），先吞数据
+    const hasStoreTransfer = zmodemStore.getActiveTransfer(props.sessionId || '')
+    if (!zmodemService && hasStoreTransfer) {
+      return
+    }
+
+    // Zmodem detection: scan for HEX header in normal terminal output.
+    // Skip if the service was aborted (waiting for the next rz/sz command).
+    const activeZmodem = zmodemService && zmodemStore.getActiveTransfer(props.sessionId || '')
+    if (zmodemService && !activeZmodem && !zmodemService.isAborted?.()) {
+      if (isZmodemStarting) {
+        // Already detected header and waiting for SessionStartZmodem / on_detect.
+        // Feed subsequent data to sentry so it can complete detection without
+        // re-processing the header heuristic on every retry frame.
+        zmodemService.consume(payload.data)
+        return
+      }
+      // zmodem HEX header: *** <ZDLE> B hex_digits
+      const ZMODEM_HEX_RE = /\*{2,}(?:\x18)?[ABC][0-9a-fA-F]{10,}/
+      if (ZMODEM_HEX_RE.test(payload.data)) {
+        isZmodemStarting = true
+        if (zmodemStartTimer) clearTimeout(zmodemStartTimer)
+        zmodemStartTimer = setTimeout(() => {
+          isZmodemStarting = false
+        }, 3000)
+        const sid = props.sessionId
+        if (sid) {
+          // Consume immediately to avoid losing data during async handoff
+          zmodemService.consume(payload.data)
+          import('../../wailsjs/go/main/App').then(({ SessionStartZmodem }) => {
+            SessionStartZmodem(sid).catch(() => {})
+          })
+        }
+        // Hide zmodem data from terminal
+        return
+      }
+    }
+
+    // If zmodem is active, skip writing data to terminal (data comes via session:binary)
+    if (activeZmodem) {
+      isZmodemStarting = false
+      return
+    }
+
     // Filter ED3 (erase scrollback). For ED2 (clear screen), replace with
     // newline scrolling + home so that current viewport content is pushed
     // into scrollback before clearing, matching standard terminal behavior.
@@ -560,6 +868,7 @@ onMounted(() => {
   if (props.mode === 'ssh' || props.mode === 'local') {
     retryOnEnter = false
     statusUnsubscribe = EventsOn('session:status', (payload: { id: string; status: string }) => {
+      if (!isActive.value) return
       if (payload.id !== props.sessionId) return
       if (payload.status === 'connected') {
         retryOnEnter = false
@@ -597,7 +906,7 @@ onMounted(() => {
   window.addEventListener('terminal:open-search', openSearch)
 
   // Ctrl+F to open search
-  terminal.attachCustomKeyEventHandler((e) => {
+  keyHandlerDispose = terminal.attachCustomKeyEventHandler((e) => {
     if (e.ctrlKey && e.key === 'f' && e.type === 'keydown') {
       openSearch()
       return false
@@ -642,6 +951,8 @@ onMounted(() => {
     return true
   })
 
+  bindListeners()
+
   resizeObserver = new ResizeObserver(() => {
     if (isResizing || splitResizing || Date.now() < suppressResizeUntil) return
     const el = terminalRef.value
@@ -663,13 +974,66 @@ onMounted(() => {
   }
 })
 
+onActivated(() => {
+  // Component restored from KeepAlive cache.
+  isActive.value = true
+  // Re-attach terminal element — another component may have moved it while
+  // we were cached (e.g. merge→drag-out→re-merge keeps panelId, KeepAlive
+  // reuses the cached BaseTerminal, but the terminal is in holding).
+  if (terminalRef.value && props.sessionId) {
+    attachTerminal(props.sessionId, terminalRef.value)
+    nextTick(() => getFitAddon()?.fit())
+  }
+  // Re-register onData/keyHandler listeners that were disposed in onDeactivated.
+  bindListeners?.()
+  // Terminal dimensions may be stale after tab switch; recalculate.
+  resize()
+  // Re-initialize zmodem service only if it was disposed in onDeactivated.
+  // If a transfer was active, the service is still running — skip recreate.
+  // safe: no focus() call here, avoids WebView2 crash race with native dialogs.
+  if (props.sessionId && props.mode === 'ssh' && !zmodemService) {
+    initZmodemService(props.sessionId)
+  }
+  // Note: focus() is intentionally skipped here. Calling focus() during
+  // activation can race with native dialogs (OpenDirectoryDialog etc.)
+  // and trigger a WebView2 crash (edge.Chromium.Focus parameter error).
+})
+
+onDeactivated(() => {
+  // Component deactivated by KeepAlive (e.g. terminal tab moved into workspace).
+  // Mark inactive so session event handlers become no-ops.
+  isActive.value = false
+  // Dispose per-component listeners to prevent duplicate input when another
+  // BaseTerminal mounts with the same shared terminal instance.
+  onDataDispose?.dispose()
+  onDataDispose = null
+  keyHandlerDispose?.dispose()
+  keyHandlerDispose = null
+
+  // If a transfer is still active, keep the service running so the background
+  // transfer continues. Otherwise dispose and restore backend state.
+  const hasStoreTransfer = zmodemStore.getActiveTransfer(props.sessionId || '')
+  if (hasStoreTransfer) {
+    return
+  }
+  disposeZmodemService(props.sessionId || '')
+})
+
 // Watch sessionId changes to rebind session data
-watch(() => props.sessionId, (newId) => {
-  if (newId && terminal && (props.mode === 'ssh' || props.mode === 'local')) {
-    const history = sessionStore.getData(newId)
-    if (history) {
-      terminal.write(history)
+watch(() => props.sessionId, (newId, oldId) => {
+  if (oldId && oldId !== newId) {
+    if (terminalRef.value) detachTerminal(oldId, terminalRef.value)
+    releaseTerminal(oldId, terminalInstanceRef)
+    disposeZmodemService(oldId)
+  }
+  if (newId && (props.mode === 'ssh' || props.mode === 'local')) {
+    initZmodemService(newId)
+    terminal = acquireTerminal(newId, terminalInstanceRef, getTerminalOptions())
+    if (terminalRef.value) {
+      attachTerminal(newId, terminalRef.value)
     }
+    // Re-bind onData/keyHandler on the new terminal
+    bindListeners?.()
     const delays = [200, 400, 600, 800, 1000, 1500, 2000]
     delays.forEach((delay) => {
       setTimeout(() => resize(), delay)
@@ -693,9 +1057,7 @@ function openSearch() {
     searchInputRef.value?.focus()
     if (searchText.value) {
       searchInputRef.value?.select()
-      if (searchAddon) {
-        searchAddon.findNext(searchText.value, { decorations: searchDecoOptions })
-      }
+      getSearchAddon()?.findNext(searchText.value, { decorations: searchDecoOptions })
     }
   })
 }
@@ -705,27 +1067,27 @@ function closeSearch() {
   searchText.value = ''
   searchResultIndex.value = 0
   searchResultCount.value = 0
-  searchAddon?.clearDecorations()
+  getSearchAddon()?.clearDecorations()
 }
 
 function onSearchInput() {
-  if (!searchAddon || !searchText.value) {
+  if (!searchText.value) {
     searchResultIndex.value = 0
     searchResultCount.value = 0
-    searchAddon?.clearDecorations()
+    getSearchAddon()?.clearDecorations()
     return
   }
-  searchAddon.findNext(searchText.value, { incremental: true, decorations: searchDecoOptions })
+  getSearchAddon()?.findNext(searchText.value, { incremental: true, decorations: searchDecoOptions })
 }
 
 function onSearchNext() {
-  if (!searchAddon || !searchText.value) return
-  searchAddon.findNext(searchText.value, { decorations: searchDecoOptions })
+  if (!searchText.value) return
+  getSearchAddon()?.findNext(searchText.value, { decorations: searchDecoOptions })
 }
 
 function onSearchPrev() {
-  if (!searchAddon || !searchText.value) return
-  searchAddon.findPrevious(searchText.value, { decorations: searchDecoOptions })
+  if (!searchText.value) return
+  getSearchAddon()?.findPrevious(searchText.value, { decorations: searchDecoOptions })
 }
 
 // Watch terminal settings changes
@@ -738,10 +1100,33 @@ watch(() => settingsStore.settings.terminal, (ts) => {
   resize()
 }, { deep: true })
 
+// Detach terminal before Vue nulls template refs.
+// In Vue 3, onUnmounted fires AFTER template refs are set to null,
+// so detachTerminal would see terminalRef.value === null and skip.
+// onBeforeUnmount fires while refs are still valid.
+onBeforeUnmount(() => {
+  if (props.sessionId && terminalRef.value) {
+    detachTerminal(props.sessionId, terminalRef.value)
+  }
+})
+
 onUnmounted(() => {
   resizeObserver?.disconnect()
   intersectionObserver?.disconnect()
-  terminal?.dispose()
+
+  // Dispose per-component listeners BEFORE releasing terminal.
+  // The terminal instance may outlive this component if another
+  // component still holds a reference.
+  onDataDispose?.dispose()
+  onDataDispose = null
+  keyHandlerDispose?.dispose()
+  keyHandlerDispose = null
+
+  // Release reference (delayed dispose: terminal survives 500ms)
+  if (props.sessionId) {
+    releaseTerminal(props.sessionId, terminalInstanceRef)
+  }
+
   unsubscribe?.()
   statusUnsubscribe?.()
   if (onDocumentMouseUp) {
@@ -761,6 +1146,9 @@ onUnmounted(() => {
   window.removeEventListener('split:resize-end', onSplitResizeEnd)
   window.removeEventListener('terminal:open-search', openSearch)
   suggestions.close()
+  if (!zmodemStore.getActiveTransfer(props.sessionId || '')) {
+    disposeZmodemService(props.sessionId || '')
+  }
 })
 
 // Paste handling
@@ -934,5 +1322,23 @@ defineExpose({
 .menu-item.disabled {
   color: var(--text-disabled);
   cursor: default;
+}
+
+.drop-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+.drop-overlay span {
+  font-size: 14px;
+  color: #fff;
+  padding: 12px 24px;
+  border: 2px dashed rgba(255, 255, 255, 0.6);
+  border-radius: var(--radius-md);
 }
 </style>

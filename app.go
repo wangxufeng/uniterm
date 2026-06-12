@@ -441,6 +441,13 @@ func (a *App) CreateSession(sessionType string, config session.ConnectionConfig)
 		})
 	})
 
+	s.SetOnBinaryCallback(func(data []byte) {
+		runtime.EventsEmit(a.ctx, "session:binary", map[string]interface{}{
+			"id":   s.ID(),
+			"data": base64.StdEncoding.EncodeToString(data),
+		})
+	})
+
 	s.SetOnStatusChangeCallback(func(status session.SessionStatus) {
 		payload := map[string]interface{}{
 			"id":     s.ID(),
@@ -542,6 +549,61 @@ func (a *App) SessionResize(sessionID string, cols, rows int) error {
 		return fmt.Errorf("session not found: %s", sessionID)
 	}
 	return s.Resize(cols, rows)
+}
+
+func (a *App) SessionStartZmodem(sessionID string) error {
+	if a.sessionManager == nil {
+		return fmt.Errorf("session manager not initialized")
+	}
+	s, ok := a.sessionManager.Get(sessionID)
+	if !ok {
+		return fmt.Errorf("session not found: %s", sessionID)
+	}
+	s.SetZmodemMode(true)
+	return nil
+}
+
+func (a *App) SessionEndZmodem(sessionID string) error {
+	if a.sessionManager == nil {
+		return fmt.Errorf("session manager not initialized")
+	}
+	s, ok := a.sessionManager.Get(sessionID)
+	if !ok {
+		return fmt.Errorf("session not found: %s", sessionID)
+	}
+	s.SetZmodemMode(false)
+	return nil
+}
+
+func (a *App) SessionWriteBinary(sessionID string, base64Data string) error {
+	if a.sessionManager == nil {
+		return fmt.Errorf("session manager not initialized")
+	}
+	s, ok := a.sessionManager.Get(sessionID)
+	if !ok {
+		return fmt.Errorf("session not found: %s", sessionID)
+	}
+	data, err := base64.StdEncoding.DecodeString(base64Data)
+	if err != nil {
+		return fmt.Errorf("decode base64: %w", err)
+	}
+	return s.Write(data)
+}
+
+func (a *App) ReadFileBase64(path string) (string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("read file: %w", err)
+	}
+	return base64.StdEncoding.EncodeToString(data), nil
+}
+
+func (a *App) WriteFileBase64(path string, base64Data string) error {
+	data, err := base64.StdEncoding.DecodeString(base64Data)
+	if err != nil {
+		return fmt.Errorf("decode base64: %w", err)
+	}
+	return os.WriteFile(path, data, 0644)
 }
 
 func (a *App) RDPSetPosition(sessionID string, x, y, w, h int) error {
@@ -986,6 +1048,14 @@ func (a *App) RemoveTempFile(path string) error {
 		}
 	}
 	return os.Remove(path)
+}
+
+// FrontendLog writes a frontend log message to the application log file.
+// This is the canonical interface for the frontend to persist debug/audit
+// messages alongside backend logs.
+func (a *App) FrontendLog(tag string, message string) {
+	_ = log.Init()
+	log.Writef("[%s] %s", tag, message)
 }
 
 // GetAvailableShells returns a list of shell executables found on the system.

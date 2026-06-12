@@ -15,7 +15,7 @@
         :is-active="activePanelId === panel.id"
         :broadcast-active="broadcastActive"
         :workspace-id="tabId"
-        :key="panel.id"
+        :key="`${panel.id}-${tabId}`"
         @close="handleClosePanel(panel.id)"
         @dragstart="onPanelDragStart($event, panel.id)"
         @toggle-ai-lock="$emit('toggleAiLock', $event)"

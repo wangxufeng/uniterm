@@ -14,7 +14,7 @@
       <Sidebar :visible="sidebarVisible" @toggle="sidebarVisible = !sidebarVisible" @connect="onConnect" @connect-sftp="onConnectSftp" @connect-rdp="onConnectRDP" @connect-vnc="onConnectVNC" @connect-spice="onConnectSPICE" @connect-d-b="onConnectDB" @connect-monitor="onConnectMonitor" />
       <div class="tab-area">
         <template v-if="activeTab">
-          <KeepAlive :include="['DBTabContent', 'MonitorTabContent']">
+          <KeepAlive :include="['DBTabContent', 'MonitorTabContent', 'TerminalTabContent', 'WorkspaceContent']">
             <TerminalTabContent
               v-if="activeTab.type === 'terminal'"
               :key="activeTab.id"

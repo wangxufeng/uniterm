@@ -171,7 +171,15 @@ func (s *SSHSession) readLoop() {
 		n, err := s.stdout.Read(buf)
 		if n > 0 {
 			s.lastReadTime.Store(time.Now().UnixNano())
-			s.emitData(append([]byte(nil), buf[:n]...))
+			data := append([]byte(nil), buf[:n]...)
+			if s.IsZmodemMode() {
+				s.emitBinary(data)
+			} else if looksLikeZmodemHeader(data) {
+				s.SetZmodemMode(true)
+				s.emitBinary(data)
+			} else {
+				s.emitData(data)
+			}
 		}
 		if err != nil {
 			if err != io.EOF {

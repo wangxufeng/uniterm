@@ -67,7 +67,10 @@ type Session interface {
 
 	Write(data []byte) error
 	SetOnDataCallback(cb func([]byte))
+	SetOnBinaryCallback(cb func([]byte))
 	SetOnStatusChangeCallback(cb func(SessionStatus))
+	SetZmodemMode(bool)
+	IsZmodemMode() bool
 }
 
 type baseSession struct {
@@ -76,21 +79,25 @@ type baseSession struct {
 	title            string
 	status           SessionStatus
 	onDataCallback   func([]byte)
+	onBinaryCallback func([]byte)
 	onStatusCallback func(SessionStatus)
 	mu               sync.RWMutex
 	pendingCols      int
 	pendingRows      int
+	zmodemMode       bool
 }
 
 func (s *baseSession) ID() string            { return s.id }
 func (s *baseSession) Type() string          { return s.sessionType }
 func (s *baseSession) Title() string         { return s.title }
 func (s *baseSession) Status() SessionStatus { s.mu.RLock(); defer s.mu.RUnlock(); return s.status }
+
 func (s *baseSession) SetOnDataCallback(cb func([]byte)) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.onDataCallback = cb
 }
+
 func (s *baseSession) SetOnStatusChangeCallback(cb func(SessionStatus)) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -129,8 +136,6 @@ func (s *baseSession) GetPendingSize() (cols, rows int) {
 	return s.pendingCols, s.pendingRows
 }
 
-// getInitialSize returns the pending size if already set, otherwise the
-// supplied defaults. Use this for initial PTY / terminal allocation.
 func (s *baseSession) getInitialSize(defCols, defRows int) (int, int) {
 	cols, rows := s.GetPendingSize()
 	if cols <= 0 {
@@ -140,4 +145,63 @@ func (s *baseSession) getInitialSize(defCols, defRows int) (int, int) {
 		rows = defRows
 	}
 	return cols, rows
+}
+
+func (s *baseSession) SetZmodemMode(v bool) {
+	s.mu.Lock()
+	s.zmodemMode = v
+	s.mu.Unlock()
+}
+
+func (s *baseSession) IsZmodemMode() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.zmodemMode
+}
+
+func (s *baseSession) SetOnBinaryCallback(cb func([]byte)) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.onBinaryCallback = cb
+}
+
+func (s *baseSession) emitBinary(data []byte) {
+	s.mu.RLock()
+	cb := s.onBinaryCallback
+	s.mu.RUnlock()
+	if cb != nil {
+		cb(data)
+	}
+}
+
+func looksLikeZmodemHeader(data []byte) bool {
+	for i := 0; i < len(data); i++ {
+		if data[i] != '*' {
+			continue
+		}
+		if i+1 >= len(data) || data[i+1] != '*' {
+			continue
+		}
+
+		if i+3 < len(data) && data[i+2] == 0x18 && data[i+3] >= 'A' && data[i+3] <= 'C' {
+			return true
+		}
+
+		hexCount := 0
+		for j := i + 2; j < len(data); j++ {
+			if isHexDigit(data[j]) {
+				hexCount++
+			} else {
+				break
+			}
+		}
+		if hexCount >= 14 {
+			return true
+		}
+	}
+	return false
+}
+
+func isHexDigit(c byte) bool {
+	return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')
 }

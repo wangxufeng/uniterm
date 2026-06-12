@@ -213,8 +213,6 @@ async function duplicateTab() {
   if (!panel) return
   const newPanel = panelStore.createPanel(panel.config, panel.type)
   newPanel.title = panel.title
-  const newTab = tabStore.createTerminalTab(panel.title, newPanel.id)
-  panelStore.movePanelToTab(newPanel.id, newTab.id)
   if (panel.config) {
     try {
       const info = await CreateSession(panel.config.type, panel.config)
@@ -223,6 +221,8 @@ async function duplicateTab() {
       console.error('Failed to duplicate session:', e)
     }
   }
+  const newTab = tabStore.createTerminalTab(panel.title, newPanel.id)
+  panelStore.movePanelToTab(newPanel.id, newTab.id)
   closeContextMenu()
 }
 
