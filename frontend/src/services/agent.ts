@@ -338,7 +338,7 @@ export async function runAgent(userInput: string) {
       const timeoutSec = (tu.input.timeout as number) || 60
       const timeoutMs = Math.max(5000, Math.min(timeoutSec * 1000, 300000))
       const headLines = (tu.input.head_lines as number) ?? 50
-      const tailLines = (tu.input.tail_lines as number) ?? 150
+      const tailLines = (tu.input.tail_lines as number) ?? 300
       const risk = getRisk(tu)
 
       if (shouldConfirm(risk)) {
@@ -417,8 +417,8 @@ export async function runAgent(userInput: string) {
     } else if (tu.name === 'collect_output') {
       const timeoutSec = (tu.input.timeout as number) || 30
       const timeoutMs = Math.max(5000, Math.min(timeoutSec * 1000, 120000))
-      const headLines = (tu.input.head_lines as number) ?? 50
-      const tailLines = (tu.input.tail_lines as number) ?? 150
+      const headLines = (tu.input.head_lines as number) ?? 100
+      const tailLines = (tu.input.tail_lines as number) ?? 300
       try {
         const result = await collectOutput(timeoutMs, headLines, tailLines)
         store.addMessage({

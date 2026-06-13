@@ -124,7 +124,7 @@ export async function executeCommand(
   command: string,
   timeoutMs: number = 60000,
   headLines: number = 50,
-  tailLines: number = 150
+  tailLines: number = 300
 ): Promise<ExecuteResult> {
   const { sessionId, shellPath } = resolveActiveSession()
   const marker = `__AI_DONE_${Date.now()}_${Math.random().toString(36).slice(2, 8)}__`
@@ -225,8 +225,8 @@ export interface CollectResult {
 
 export async function collectOutput(
   timeoutMs: number = 30000,
-  headLines: number = 50,
-  tailLines: number = 150
+  headLines: number = 100,
+  tailLines: number = 300
 ): Promise<CollectResult> {
   const { sessionId } = resolveActiveSession()
 

@@ -124,7 +124,7 @@ export const AVAILABLE_TOOLS = [
         },
         tail_lines: {
           type: 'number',
-          description: 'Number of lines to keep from the END of output when truncation occurs. Default 150. Increase to see more recent output (errors usually at the end).'
+          description: 'Number of lines to keep from the END of output when truncation occurs. Default 300. Increase to see more recent output (errors usually at the end).'
         }
       },
       required: ['command', 'risk']
@@ -169,11 +169,11 @@ export const AVAILABLE_TOOLS = [
         },
         head_lines: {
           type: 'number',
-          description: 'Head lines to keep on truncation. Default 50.'
+          description: 'Head lines to keep on truncation. Default 100.'
         },
         tail_lines: {
           type: 'number',
-          description: 'Tail lines to keep on truncation. Default 150.'
+          description: 'Tail lines to keep on truncation. Default 300.'
         }
       }
     }
