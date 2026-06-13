@@ -228,6 +228,35 @@ export function captureTerminal(headLines: number = 0, tailLines: number = 50): 
   return { output: lines.join('\n') }
 }
 
+export interface CollectResult {
+  output: string
+  timedOut: boolean
+}
+
+export async function collectOutput(
+  timeoutMs: number = 30000,
+  headLines: number = 50,
+  tailLines: number = 150
+): Promise<CollectResult> {
+  const { sessionId } = resolveActiveSession()
+
+  return new Promise((resolve) => {
+    let output = ''
+    const unsubscribe = EventsOn('session:data', (payload: { id: string; data: string }) => {
+      if (payload.id !== sessionId) return
+      output += payload.data
+    })
+
+    setTimeout(() => {
+      unsubscribe()
+      resolve({
+        output: truncateOutput(stripAnsi(output).trim(), headLines, tailLines),
+        timedOut: true,
+      })
+    }, timeoutMs)
+  })
+}
+
 function buildCommand(command: string, marker: string, shellPath?: string): string {
   const lower = (shellPath || '').toLowerCase()
   if (lower.includes('powershell') || lower.includes('pwsh')) {
