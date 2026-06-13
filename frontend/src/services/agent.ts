@@ -356,6 +356,7 @@ export async function runAgent(userInput: string) {
           }
         }]
         store.isRunning = false
+        cleanupStreamListeners()
         return
       }
 
