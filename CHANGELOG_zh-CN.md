@@ -1,5 +1,14 @@
 # 更新日志
 
+## v2026.06.13-alpha
+
+- **new** AI 终端工具链。新增 5 个工具：start_command（启动后台命令）、capture_terminal（读取终端屏幕）、collect_output（被动等待输出）、send_terminal_key（发送终端输入）、interrupt_command（中断命令）。execute_command 新增超时和输出截断参数，AI 可自主控制等待时长。
+- **new** AI 对话 IN 框按工具类型解析展示。头部显示工具中文名和超时 `[xxs]`，体部按类型展示命令/参数，不再显示原始 JSON。
+- **new** AI 侧边栏搜索。支持高亮匹配文本、上下导航（Enter / Shift+Enter）、匹配计数，自动滚动到当前匹配。
+- **bugfix** 修复文本搜索菜单在所有终端窗口同时弹出搜索框的问题。事件细化到当前面板。
+- **bugfix** 修复 AI 对话工具确认后输出重复和表格串行问题。shouldConfirm 分支缺少监听器清理导致 ai:token 泄漏。
+- **improve** AI 系统提示词重写。增加超时指南、超时决策树、交互式提示处理说明，禁止清屏命令。
+
 ## v2026.06.12-alpha
 
 - **new** Zmodem 文件传输（rz/sz）。支持在 SSH 终端中使用 `rz -be` 上传（含直接拖拽文件到终端）、`sz` 下载文件，带实时进度条。
