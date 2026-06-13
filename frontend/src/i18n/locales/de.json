@@ -121,6 +121,8 @@
   "ai.copyFailed": "Kopieren fehlgeschlagen",
   "ai.maximize": "Maximieren",
   "ai.restore": "Wiederherstellen",
+  "ai.search": "Suche",
+  "ai.searchPlaceholder": "Konversationen durchsuchen...",
   "sftp.local": "Lokal",
   "sftp.remote": "Remote",
   "sftp.name": "Name",
