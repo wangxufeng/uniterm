@@ -1,5 +1,16 @@
 # Changelog
 
+## v2026.06.13-alpha
+
+- **new** AI terminal toolchain. 5 new tools: start_command (fire-and-forget), capture_terminal (read screen), collect_output (passive wait), send_terminal_key (interactive input), interrupt_command (cancel). execute_command gains configurable timeout and output truncation.
+- **new** AI SSE streaming. Go backend proxies Anthropic SSE events, frontend renders tokens in real time via ai:token.
+- **new** AI context management. Layered system prompt (static cached + dynamic injected), token-aware context window management for improved prompt cache hit rate.
+- **new** AI IN boxes show tool type names with i18n and parsed parameters per tool type. Headers display tool name with timeout `[xxs]`, body shows command/params instead of raw JSON.
+- **new** AI sidebar search. Highlight matches, navigate matches (Enter / Shift+Enter), match count, auto-scroll to active match.
+- **bugfix** Fixed text search menu opening search bar in all terminal windows simultaneously. Event now targets the current panel.
+- **improve** Rewritten AI system prompt with timeout guidelines, decision tree, interactive prompt handling, and clear-screen prohibition.
+- **new** macOS frameless window rounded corners.
+
 ## v2026.06.12-alpha
 
 - **new** Zmodem file transfer (rz/sz). Upload (including drag-and-drop onto terminal) and download files in SSH terminals via `rz -be` and `sz`, with real-time progress bars.
