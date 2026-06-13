@@ -1,5 +1,11 @@
 # Changelog
 
+## v2026.06.13-alpha.1
+
+- **new** Update checker. Manual check + auto-check for GitHub Releases. Settings About page shows current version, notification on new release with view details link.
+- **fix** macOS rounded corners now use native Wails TitleBarHiddenInset, removing CSS border-radius workaround that caused a visible square frame.
+- **fix** macOS traffic lights now use system native controls instead of custom simulated buttons.
+
 ## v2026.06.13-alpha
 
 - **new** AI terminal toolchain. 5 new tools: start_command (fire-and-forget), capture_terminal (read screen), collect_output (passive wait), send_terminal_key (interactive input), interrupt_command (cancel). execute_command gains configurable timeout and output truncation.
@@ -9,7 +15,6 @@
 - **new** AI sidebar search. Highlight matches, navigate matches (Enter / Shift+Enter), match count, auto-scroll to active match.
 - **bugfix** Fixed text search menu opening search bar in all terminal windows simultaneously. Event now targets the current panel.
 - **improve** Rewritten AI system prompt with timeout guidelines, decision tree, interactive prompt handling, and clear-screen prohibition.
-- **new** macOS frameless window rounded corners.
 
 ## v2026.06.12-alpha
 

@@ -1,5 +1,11 @@
 # 更新日志
 
+## v2026.06.13-alpha.1
+
+- **new** 更新检查。设置关于页支持手动检查 + 后台自动检查 GitHub Releases，发现新版本弹出通知并可直接跳转查看详情。
+- **fix** macOS 无边框窗口圆角改为原生实现。使用 Wails TitleBarHiddenInset，移除 CSS 圆角 hack，修复之前方形外框问题。
+- **fix** macOS 窗口控制按钮改用系统原生红绿灯，移除自定义模拟按钮。
+
 ## v2026.06.13-alpha
 
 - **new** AI 终端工具链。新增 5 个工具：start_command（启动后台命令）、capture_terminal（读取终端屏幕）、collect_output（被动等待输出）、send_terminal_key（发送终端输入）、interrupt_command（中断命令）。execute_command 新增超时和输出截断参数，AI 可自主控制等待时长。
@@ -9,7 +15,6 @@
 - **new** AI 侧边栏搜索。支持高亮匹配文本、上下导航（Enter / Shift+Enter）、匹配计数，自动滚动到当前匹配。
 - **bugfix** 修复文本搜索菜单在所有终端窗口同时弹出搜索框的问题。事件细化到当前面板。
 - **improve** AI 系统提示词重写。增加超时指南、超时决策树、交互式提示处理说明，禁止清屏命令。
-- **new** macOS 无边框窗口圆角支持。
 
 ## v2026.06.12-alpha
 
