@@ -121,6 +121,8 @@
   "ai.copyFailed": "複製失敗",
   "ai.maximize": "最大化",
   "ai.restore": "恢復",
+  "ai.search": "搜尋",
+  "ai.searchPlaceholder": "搜尋對話內容...",
   "sftp.local": "本機",
   "sftp.remote": "遠端",
   "sftp.name": "名稱",
