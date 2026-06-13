@@ -152,6 +152,66 @@ export async function executeCommand(
   }
 }
 
+export interface StartResult {
+  output: string
+  started: boolean
+}
+
+export async function startCommand(command: string): Promise<StartResult> {
+  const tabStore = useTabStore()
+  const panelStore = usePanelStore()
+
+  const lockedPanelId = tabStore.getAILockedPanel()
+  let panel = lockedPanelId ? panelStore.getPanel(lockedPanelId) : null
+
+  if (!panel) {
+    const activeTab = tabStore.activeTab
+    if (activeTab?.type === 'terminal' || activeTab?.type === 'settings') {
+      panel = panelStore.getPanel(activeTab.panelId)
+    } else if (activeTab?.type === 'workspace' && activeTab.activePanelId) {
+      panel = panelStore.getPanel(activeTab.activePanelId)
+    }
+  }
+
+  if (!panel || !panel.sessionId) {
+    throw new Error('No active terminal session')
+  }
+
+  const sessionId = panel.sessionId
+  const shellPath = panel.config?.shellPath
+
+  const lowerShell = (shellPath || '').toLowerCase()
+  let newline: string
+  if (lowerShell.includes('powershell') || lowerShell.includes('pwsh')) {
+    newline = '\r'
+  } else if (lowerShell.includes('cmd')) {
+    newline = '\r\n'
+  } else if (lowerShell.includes('bash') || lowerShell.includes('sh')) {
+    newline = '\r\n'
+  } else {
+    newline = '\n'
+  }
+
+  await SessionWrite(sessionId, command + newline)
+
+  // Collect output for 3 seconds, then return
+  return new Promise((resolve) => {
+    let output = ''
+    const unsubscribe = EventsOn('session:data', (payload: { id: string; data: string }) => {
+      if (payload.id !== sessionId) return
+      output += payload.data
+    })
+
+    setTimeout(() => {
+      unsubscribe()
+      resolve({
+        output: stripAnsi(output).trim(),
+        started: true,
+      })
+    }, 3000)
+  })
+}
+
 function buildCommand(command: string, marker: string, shellPath?: string): string {
   const lower = (shellPath || '').toLowerCase()
   if (lower.includes('powershell') || lower.includes('pwsh')) {
