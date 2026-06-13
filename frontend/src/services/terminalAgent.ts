@@ -1,5 +1,6 @@
 import { EventsOn } from '../../wailsjs/runtime'
 import { SessionWrite } from '../../wailsjs/go/main/App'
+import { getManagedTerminal } from '../services/terminalManager'
 import { useTabStore } from '../stores/tabStore'
 import { usePanelStore } from '../stores/panelStore'
 
@@ -184,6 +185,47 @@ export async function startCommand(command: string): Promise<StartResult> {
       })
     }, 3000)
   })
+}
+
+export interface CaptureResult {
+  output: string
+}
+
+export function captureTerminal(headLines: number = 0, tailLines: number = 50): CaptureResult {
+  const { sessionId } = resolveActiveSession()
+
+  const managed = getManagedTerminal(sessionId)
+  if (!managed || !managed.terminal) {
+    return { output: '' }
+  }
+
+  const terminal = managed.terminal
+  const buffer = terminal.buffer.active
+  const totalLines = buffer.length
+
+  if (totalLines === 0) {
+    return { output: '' }
+  }
+
+  const lines: string[] = []
+  const effectiveHead = Math.min(headLines, totalLines)
+  const effectiveTail = Math.min(tailLines, totalLines - effectiveHead)
+
+  for (let i = 0; i < effectiveHead; i++) {
+    const line = buffer.getLine(i)
+    if (line) lines.push(line.translateToString())
+  }
+
+  if (effectiveHead + effectiveTail < totalLines) {
+    lines.push(`... (${totalLines - effectiveHead - effectiveTail} 行省略) ...`)
+  }
+
+  for (let i = totalLines - effectiveTail; i < totalLines; i++) {
+    const line = buffer.getLine(i)
+    if (line) lines.push(line.translateToString())
+  }
+
+  return { output: lines.join('\n') }
 }
 
 function buildCommand(command: string, marker: string, shellPath?: string): string {
