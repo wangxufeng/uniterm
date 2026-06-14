@@ -284,14 +284,14 @@ watch(() => props.defaultGroupId, (gid) => {
 })
 
 // Auto-switch default port when changing type
-watch(() => form.type, (newType, oldType) => {
+watch(() => form.type, (newType) => {
   if (isEdit.value) return
-  if (newType === 'rdp' && !REMOTE_TYPES.includes(oldType || '')) form.port = 3389
-  else if (newType === 'vnc' && !REMOTE_TYPES.includes(oldType || '')) form.port = 5900
-  else if (newType === 'spice' && !REMOTE_TYPES.includes(oldType || '')) form.port = 5900
-  else if (newType === 'ssh') form.port = 22
+  if (newType === 'ssh') form.port = 22
   else if (newType === 'telnet') form.port = 23
   else if (newType === 'mosh') form.port = 22
+  else if (newType === 'rdp') form.port = 3389
+  else if (newType === 'vnc') form.port = 5900
+  else if (newType === 'spice') form.port = 5900
   else if (newType === 'database') form.port = 3306
   if (REMOTE_TYPES.includes(newType) || newType === 'database') {
     form.authType = 'password'
