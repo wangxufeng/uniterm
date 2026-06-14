@@ -295,6 +295,10 @@ export namespace session {
 	    dbName?: string;
 	    postLoginScript?: string;
 	    tunnelSSHConnId?: string;
+	    sftpMaxConcurrency?: number;
+	    ftpEncryption?: string;
+	    ftpPassive: boolean;
+	    ftpEncoding?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ConnectionConfig(source);
@@ -320,6 +324,10 @@ export namespace session {
 	        this.dbName = source["dbName"];
 	        this.postLoginScript = source["postLoginScript"];
 	        this.tunnelSSHConnId = source["tunnelSSHConnId"];
+	        this.sftpMaxConcurrency = source["sftpMaxConcurrency"];
+	        this.ftpEncryption = source["ftpEncryption"];
+	        this.ftpPassive = source["ftpPassive"];
+	        this.ftpEncoding = source["ftpEncoding"];
 	    }
 	}
 	export class ConnectionGroup {

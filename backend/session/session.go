@@ -43,6 +43,12 @@ type ConnectionConfig struct {
 	// When set, the connection goes through local port forwarding:
 	//   127.0.0.1:auto-port → tunnel SSH → target Host:Port
 	TunnelSSHConnID string `json:"tunnelSSHConnId,omitempty"`
+	// SFTP max concurrent transfers (0 = unlimited)
+	SftpMaxConcurrency int `json:"sftpMaxConcurrency,omitempty"`
+	// FTP-specific fields
+	FtpEncryption string `json:"ftpEncryption,omitempty"` // "none"(default) | "auto" | "required"
+	FtpPassive    bool   `json:"ftpPassive"`              // passive mode (default true)
+	FtpEncoding   string `json:"ftpEncoding,omitempty"`   // "utf-8" | "gbk" | "shift-jis" | "latin-1"
 }
 
 // ConnectionStoreData is the top-level structure persisted to connections.json.

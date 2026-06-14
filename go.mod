@@ -10,6 +10,7 @@ require (
 	github.com/go-sql-driver/mysql v1.10.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
+	github.com/jlaffaye/ftp v0.2.1
 	github.com/lib/pq v1.12.3
 	github.com/pkg/sftp v1.13.10
 	github.com/rqlite/gorqlite v0.0.0-20260504155303-50d445fd0ab9

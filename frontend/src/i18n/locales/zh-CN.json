@@ -13,6 +13,7 @@
   "sidebar.connect": "连接",
   "sidebar.connectSSH": "连接 SSH",
   "sidebar.connectSftp": "连接 SFTP",
+  "sidebar.connectFtp": "连接 FTP",
   "sidebar.edit": "编辑",
   "sidebar.duplicate": "复制会话",
   "sidebar.delete": "删除",
@@ -44,6 +45,7 @@
   "conn.hostRequired": "主机地址不能为空",
   "conn.postLoginScript": "登录后执行",
   "conn.postLoginScriptPlaceholder": "每行一条命令，连接成功后依次执行",
+  "conn.sftpMaxConcurrency": "SFTP 最大并发传输",
   "conn.group": "所属分组",
   "conn.noGroup": "(无分组)",
   "conn.newGroup": "+ 新建分组",
@@ -546,5 +548,12 @@
   "db.addPkNullableWarn": "以下列可空，添加主键后将自动设为 NOT NULL：{columns}",
   "db.autoIncrementTypeWarn": "AUTO_INCREMENT 要求列为整数类型（INT、BIGINT 等）",
   "conn.tunnel": "SSH 隧道",
-  "conn.tunnelPlaceholder": "选择 SSH 连接作为跳板..."
+  "conn.tunnelPlaceholder": "选择 SSH 连接作为跳板...",
+  "conn.categoryFileTransfer": "文件传输",
+  "conn.ftpEncryption": "TLS 加密",
+  "conn.ftpEncryptionNone": "不加密",
+  "conn.ftpEncryptionAuto": "如果可用则加密",
+  "conn.ftpEncryptionRequired": "必须加密",
+  "conn.ftpPassive": "被动模式",
+  "conn.ftpEncoding": "字符编码"
 }

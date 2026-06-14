@@ -484,6 +484,17 @@ func (a *App) CreateSession(sessionType string, config session.ConnectionConfig)
 	}
 	// ── End SSH Tunnel ──────────────────────────────────────────
 
+	// SFTP concurrency limit
+	if sessionType == "sftp" {
+		if sftp, ok := s.(*session.SFTPSession); ok {
+			n := config.SftpMaxConcurrency
+			if n <= 0 {
+				n = 5
+			}
+			sftp.SetMaxConcurrency(n)
+		}
+	}
+
 	// Set parent HWND for RDP sessions
 	if rdp, ok := s.(*session.RDPSession); ok {
 		rdp.SetParentHwnd(a.mainHwnd)
@@ -1080,7 +1091,29 @@ func (a *App) FetchModels(apiKey, baseURL string) ([]ModelInfo, error) {
 
 // SFTP direct API — called from frontend without terminal layer
 
-func (a *App) getSftp(sid string) (*session.SFTPSession, error) {
+// fileTransferSession is the common interface for SFTP and FTP sessions.
+type fileTransferSession interface {
+	ListRemote(dir string) (session.FileListResult, error)
+	ListLocal(dir string) (session.FileListResult, error)
+	ChangeRemoteDir(dir string) (session.FileListResult, error)
+	ChangeLocalDir(dir string) (session.FileListResult, error)
+	ListLocalDrives() ([]session.FileItem, error)
+	MakeDir(dir string) error
+	Remove(path string, recursive bool) error
+	Rename(oldPath, newPath string) error
+	Chmod(path string, mode os.FileMode) error
+	LocalRemove(path string, recursive bool) error
+	LocalRename(oldPath, newPath string) error
+	LocalMkdir(dir string) error
+	Get(remotePath, localPath string, recursive bool) (string, error)
+	Put(localPath, remotePath string, recursive bool) (string, error)
+	PutContent(remotePath string, content []byte) error
+	CancelTransfer(taskID string) error
+	PauseTransfer(taskID string) error
+	ResumeTransfer(taskID string) error
+}
+
+func (a *App) getSftp(sid string) (fileTransferSession, error) {
 	if a.sessionManager == nil {
 		return nil, fmt.Errorf("session manager not initialized")
 	}
@@ -1088,79 +1121,78 @@ func (a *App) getSftp(sid string) (*session.SFTPSession, error) {
 	if !ok {
 		return nil, fmt.Errorf("session not found: %s", sid)
 	}
-	sftp, ok := s.(*session.SFTPSession)
-	if !ok {
-		return nil, fmt.Errorf("session is not SFTP")
+	if fs, ok := s.(fileTransferSession); ok {
+		return fs, nil
 	}
-	return sftp, nil
+	return nil, fmt.Errorf("not a file transfer session: %s", sid)
 }
 
 func (a *App) SftpListRemote(sessionID, dir string) (session.FileListResult, error) {
-	sftp, err := a.getSftp(sessionID)
+	fs, err := a.getSftp(sessionID)
 	if err != nil {
 		return session.FileListResult{}, err
 	}
-	return sftp.ListRemote(dir)
+	return fs.ListRemote(dir)
 }
 
 func (a *App) SftpListLocal(sessionID, dir string) (session.FileListResult, error) {
-	sftp, err := a.getSftp(sessionID)
+	fs, err := a.getSftp(sessionID)
 	if err != nil {
 		return session.FileListResult{}, err
 	}
-	return sftp.ListLocal(dir)
+	return fs.ListLocal(dir)
 }
 
 func (a *App) SftpChangeRemoteDir(sessionID, dir string) (session.FileListResult, error) {
-	sftp, err := a.getSftp(sessionID)
+	fs, err := a.getSftp(sessionID)
 	if err != nil {
 		return session.FileListResult{}, err
 	}
-	return sftp.ChangeRemoteDir(dir)
+	return fs.ChangeRemoteDir(dir)
 }
 
 func (a *App) SftpChangeLocalDir(sessionID, dir string) (session.FileListResult, error) {
-	sftp, err := a.getSftp(sessionID)
+	fs, err := a.getSftp(sessionID)
 	if err != nil {
 		return session.FileListResult{}, err
 	}
-	return sftp.ChangeLocalDir(dir)
+	return fs.ChangeLocalDir(dir)
 }
 
 func (a *App) SftpListLocalDrives(sessionID string) ([]session.FileItem, error) {
-	sftp, err := a.getSftp(sessionID)
+	fs, err := a.getSftp(sessionID)
 	if err != nil {
 		return nil, err
 	}
-	return sftp.ListLocalDrives()
+	return fs.ListLocalDrives()
 }
 
 func (a *App) SftpMakeDir(sessionID, dir string) error {
-	sftp, err := a.getSftp(sessionID)
+	fs, err := a.getSftp(sessionID)
 	if err != nil {
 		return err
 	}
-	return sftp.MakeDir(dir)
+	return fs.MakeDir(dir)
 }
 
 func (a *App) SftpRemove(sessionID, path string, recursive bool) error {
-	sftp, err := a.getSftp(sessionID)
+	fs, err := a.getSftp(sessionID)
 	if err != nil {
 		return err
 	}
-	return sftp.Remove(path, recursive)
+	return fs.Remove(path, recursive)
 }
 
 func (a *App) SftpRename(sessionID, oldPath, newPath string) error {
-	sftp, err := a.getSftp(sessionID)
+	fs, err := a.getSftp(sessionID)
 	if err != nil {
 		return err
 	}
-	return sftp.Rename(oldPath, newPath)
+	return fs.Rename(oldPath, newPath)
 }
 
 func (a *App) SftpChmod(sessionID, path, mode string) error {
-	sftp, err := a.getSftp(sessionID)
+	fs, err := a.getSftp(sessionID)
 	if err != nil {
 		return err
 	}
@@ -1168,75 +1200,75 @@ func (a *App) SftpChmod(sessionID, path, mode string) error {
 	if err != nil {
 		return fmt.Errorf("invalid mode: %s", mode)
 	}
-	return sftp.Chmod(path, os.FileMode(modeUint))
+	return fs.Chmod(path, os.FileMode(modeUint))
 }
 
 func (a *App) SftpLocalRemove(sessionID, path string, recursive bool) error {
-	sftp, err := a.getSftp(sessionID)
+	fs, err := a.getSftp(sessionID)
 	if err != nil {
 		return err
 	}
-	return sftp.LocalRemove(path, recursive)
+	return fs.LocalRemove(path, recursive)
 }
 
 func (a *App) SftpLocalRename(sessionID, oldPath, newPath string) error {
-	sftp, err := a.getSftp(sessionID)
+	fs, err := a.getSftp(sessionID)
 	if err != nil {
 		return err
 	}
-	return sftp.LocalRename(oldPath, newPath)
+	return fs.LocalRename(oldPath, newPath)
 }
 
 func (a *App) SftpLocalMkdir(sessionID, dir string) error {
-	sftp, err := a.getSftp(sessionID)
+	fs, err := a.getSftp(sessionID)
 	if err != nil {
 		return err
 	}
-	return sftp.LocalMkdir(dir)
+	return fs.LocalMkdir(dir)
 }
 
 func (a *App) SftpGet(sessionID, remotePath, localPath string, recursive bool) (string, error) {
-	sftp, err := a.getSftp(sessionID)
+	fs, err := a.getSftp(sessionID)
 	if err != nil {
 		return "", err
 	}
-	return sftp.Get(remotePath, localPath, recursive)
+	return fs.Get(remotePath, localPath, recursive)
 }
 
 func (a *App) SftpCancelTransfer(sessionID, taskID string) error {
-	sftp, err := a.getSftp(sessionID)
+	fs, err := a.getSftp(sessionID)
 	if err != nil {
 		return err
 	}
-	return sftp.CancelTransfer(taskID)
+	return fs.CancelTransfer(taskID)
 }
 
 func (a *App) SftpPauseTransfer(sessionID, taskID string) error {
-	sftp, err := a.getSftp(sessionID)
+	fs, err := a.getSftp(sessionID)
 	if err != nil {
 		return err
 	}
-	return sftp.PauseTransfer(taskID)
+	return fs.PauseTransfer(taskID)
 }
 
 func (a *App) SftpResumeTransfer(sessionID, taskID string) error {
-	sftp, err := a.getSftp(sessionID)
+	fs, err := a.getSftp(sessionID)
 	if err != nil {
 		return err
 	}
-	return sftp.ResumeTransfer(taskID)
+	return fs.ResumeTransfer(taskID)
 }
 
 func (a *App) SftpPut(sessionID, localPath, remotePath string, recursive bool) (string, error) {
-	sftp, err := a.getSftp(sessionID)
+	fs, err := a.getSftp(sessionID)
 	if err != nil {
 		return "", err
 	}
-	return sftp.Put(localPath, remotePath, recursive)
+	return fs.Put(localPath, remotePath, recursive)
 }
 
 func (a *App) SftpPutContent(sessionID, remotePath, contentBase64 string) error {
-	sftp, err := a.getSftp(sessionID)
+	fs, err := a.getSftp(sessionID)
 	if err != nil {
 		return err
 	}
@@ -1244,7 +1276,7 @@ func (a *App) SftpPutContent(sessionID, remotePath, contentBase64 string) error 
 	if err != nil {
 		return err
 	}
-	return sftp.PutContent(remotePath, content)
+	return fs.PutContent(remotePath, content)
 }
 
 // WriteTempFile writes base64-encoded content to a temp file and returns its path.

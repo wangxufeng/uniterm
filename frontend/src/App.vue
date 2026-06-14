@@ -11,7 +11,7 @@
       @tab-dragstart="onTabDragStart"
     />
     <div class="main-content">
-      <Sidebar :visible="sidebarVisible" @toggle="sidebarVisible = !sidebarVisible" @connect="onConnect" @connect-sftp="onConnectSftp" @connect-rdp="onConnectRDP" @connect-vnc="onConnectVNC" @connect-spice="onConnectSPICE" @connect-d-b="onConnectDB" @connect-monitor="onConnectMonitor" />
+      <Sidebar :visible="sidebarVisible" @toggle="sidebarVisible = !sidebarVisible" @connect="onConnect" @connect-sftp="onConnectSftp" @connect-ftp="onConnectFtp" @connect-rdp="onConnectRDP" @connect-vnc="onConnectVNC" @connect-spice="onConnectSPICE" @connect-d-b="onConnectDB" @connect-monitor="onConnectMonitor" />
       <div class="tab-area">
         <template v-if="activeTab">
           <KeepAlive>
@@ -414,6 +414,7 @@ function onSaveOnly(config: ConnectionConfig) {
 }
 
 async function onConnect(config: ConnectionConfig) {
+  if (config.type === 'ftp') return onConnectFtp(config)
   if (config.type === 'rdp') return onConnectRDP(config)
   if (config.type === 'vnc') return onConnectVNC(config)
   if (config.type === 'spice') return onConnectSPICE(config)
@@ -510,6 +511,24 @@ async function onConnectSftp(config: ConnectionConfig) {
     panelStore.bindSession(panel.id, info.id)
   } catch (e) {
     console.error('Failed to create SFTP session:', e)
+    tabStore.closeTab(tab.id)
+    panelStore.removePanel(panel.id)
+  }
+}
+
+async function onConnectFtp(config: ConnectionConfig) {
+  connectionStore.add(config)
+  const panel = panelStore.createPanel(config, 'sftp')
+  const displayTitle = config.name || `${config.user}@${config.host}`
+  panel.title = displayTitle
+  const tab = tabStore.createFtpTab(displayTitle, panel.id)
+  panelStore.movePanelToTab(panel.id, tab.id)
+
+  try {
+    const info = await CreateSession('ftp', config)
+    panelStore.bindSession(panel.id, info.id)
+  } catch (e) {
+    console.error('Failed to create FTP session:', e)
     tabStore.closeTab(tab.id)
     panelStore.removePanel(panel.id)
   }

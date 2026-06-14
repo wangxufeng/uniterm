@@ -89,6 +89,18 @@ export const useTabStore = defineStore('tab', () => {
     return tab
   }
 
+  function createFtpTab(name: string, panelId: string): SFTPTab {
+    const tab: SFTPTab = {
+      type: 'sftp',
+      id: genId('ftp-tab'),
+      panelId,
+      name
+    }
+    tabState.tabs.push(tab)
+    tabState.activeTabId = tab.id
+    return tab
+  }
+
   function createRDPTab(name: string, panelId: string): RDPTab {
     const tab: RDPTab = {
       type: 'rdp',
@@ -185,7 +197,7 @@ export const useTabStore = defineStore('tab', () => {
       ? [removed.panelId]
       : removed.type === 'workspace'
         ? removed.panelIds
-        : removed.type === 'sftp'
+        : removed.type === 'sftp' || removed.type === 'ftp'
           ? [removed.panelId]
           : []
 
@@ -485,6 +497,7 @@ export const useTabStore = defineStore('tab', () => {
     createTerminalTab,
     createSettingsTab,
     createSFPTab,
+    createFtpTab,
     createRDPTab,
     createVNCTab,
     createSPICETab,

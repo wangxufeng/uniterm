@@ -13,6 +13,7 @@
   "sidebar.connect": "連線",
   "sidebar.connectSSH": "連線 SSH",
   "sidebar.connectSftp": "連線 SFTP",
+  "sidebar.connectFtp": "連線 FTP",
   "sidebar.edit": "編輯",
   "sidebar.duplicate": "複製工作階段",
   "sidebar.delete": "刪除",
@@ -546,5 +547,12 @@
   "db.addPkNullableWarn": "以下欄可空，新增主鍵後將自動設為 NOT NULL：{columns}",
   "db.autoIncrementTypeWarn": "AUTO_INCREMENT 要求欄為整數類型（INT、BIGINT 等）",
   "conn.tunnel": "SSH 隧道",
-  "conn.tunnelPlaceholder": "選擇 SSH 連線作為跳板..."
+  "conn.tunnelPlaceholder": "選擇 SSH 連線作為跳板...",
+  "conn.categoryFileTransfer": "檔案傳輸",
+  "conn.ftpEncryption": "TLS 加密",
+  "conn.ftpEncryptionNone": "不加密",
+  "conn.ftpEncryptionAuto": "如果可用則加密",
+  "conn.ftpEncryptionRequired": "必須加密",
+  "conn.ftpPassive": "被動模式",
+  "conn.ftpEncoding": "字元編碼"
 }

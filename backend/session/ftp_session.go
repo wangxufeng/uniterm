@@ -1,7 +1,7 @@
 package session
 
 import (
-	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,32 +9,31 @@ import (
 	osUser "os/user"
 	"path"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/pkg/sftp"
-	"golang.org/x/crypto/ssh"
+	"github.com/jlaffaye/ftp"
 )
 
-type SFTPSession struct {
+type FTPSession struct {
 	baseSession
-	sshClient  *ssh.Client
-	sftpClient *sftp.Client
-	cwd        string
-	localCwd   string
-	mu         sync.RWMutex
-	transfers  map[string]*TransferTask
-	taskSeq    int64
-	sem        chan struct{} // concurrency limiter, nil = unlimited
+	conn      *ftp.ServerConn
+	cwd       string
+	localCwd  string
+	mu        sync.RWMutex
+	transfers map[string]*TransferTask
+	taskSeq   int64
+	connMu    sync.Mutex // serialize data transfer operations (FTP is not concurrent)
 }
 
-func NewSFTPSession(id string) *SFTPSession {
+func NewFTPSession(id string) *FTPSession {
 	homeDir, _ := os.UserHomeDir()
-	return &SFTPSession{
+	return &FTPSession{
 		baseSession: baseSession{
 			id:          id,
-			sessionType: "sftp",
+			sessionType: "ftp",
 			status:      StatusDisconnected,
 		},
 		cwd:       "/",
@@ -43,215 +42,155 @@ func NewSFTPSession(id string) *SFTPSession {
 	}
 }
 
-// SetMaxConcurrency limits concurrent file transfers. n <= 0 means unlimited.
-func (s *SFTPSession) SetMaxConcurrency(n int) {
-	if n > 0 {
-		s.sem = make(chan struct{}, n)
-	}
-}
-
-func (s *SFTPSession) Connect(config ConnectionConfig) error {
+func (s *FTPSession) Connect(config ConnectionConfig) error {
 	s.setStatus(StatusConnecting)
 	s.title = fmt.Sprintf("%s@%s", config.User, config.Host)
 
-	authMethods := []ssh.AuthMethod{}
-	switch config.AuthType {
-	case "password":
-		authMethods = append(authMethods, ssh.Password(config.Password))
-	case "key":
-		key, err := os.ReadFile(config.KeyPath)
+	addr := fmt.Sprintf("%s:%d", config.Host, config.Port)
+	if config.Port <= 0 {
+		addr = fmt.Sprintf("%s:21", config.Host)
+	}
+
+	encryption := config.FtpEncryption
+	if encryption == "" {
+		encryption = "none"
+	}
+
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: true,
+	}
+
+	var conn *ftp.ServerConn
+	var err error
+
+	switch encryption {
+	case "required":
+		conn, err = ftp.Dial(addr,
+			ftp.DialWithTimeout(30*time.Second),
+			ftp.DialWithExplicitTLS(tlsConfig),
+		)
 		if err != nil {
 			s.setStatus(StatusError)
-			return fmt.Errorf("read key: %w", err)
+			return fmt.Errorf("ftp dial (TLS required): %w", err)
 		}
-		signer, err := ssh.ParsePrivateKey(key)
+	case "auto":
+		conn, err = ftp.Dial(addr,
+			ftp.DialWithTimeout(30*time.Second),
+			ftp.DialWithExplicitTLS(tlsConfig),
+		)
 		if err != nil {
-			s.setStatus(StatusError)
-			return fmt.Errorf("parse key: %w", err)
+			// Fall back to plain FTP
+			conn, err = ftp.Dial(addr, ftp.DialWithTimeout(30*time.Second))
 		}
-		authMethods = append(authMethods, ssh.PublicKeys(signer))
-	case "agent":
-		authMethods = append(authMethods, ssh.Password(config.Password))
+	default: // "none"
+		conn, err = ftp.Dial(addr, ftp.DialWithTimeout(30*time.Second))
 	}
 
-	clientConfig := &ssh.ClientConfig{
-		User:            config.User,
-		Auth:            authMethods,
-		Timeout:         30 * time.Second,
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-	}
-
-	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", config.Host, config.Port), clientConfig)
 	if err != nil {
 		s.setStatus(StatusError)
-		return fmt.Errorf("ssh dial: %w", err)
+		return fmt.Errorf("ftp dial: %w", err)
 	}
 
-	sc, err := sftp.NewClient(client)
-	if err != nil {
-		client.Close()
+	if err := conn.Login(config.User, config.Password); err != nil {
+		conn.Quit()
 		s.setStatus(StatusError)
-		return fmt.Errorf("sftp client: %w", err)
+		return fmt.Errorf("ftp login: %w", err)
 	}
 
-	go func() {
-		_ = client.Wait()
-		s.Disconnect()
-	}()
-
-	s.sshClient = client
-	s.sftpClient = sc
-	if wd, err := sc.Getwd(); err == nil {
-		s.cwd = wd
-	}
+	s.conn = conn
+	s.cwd = "/"
 	s.setStatus(StatusConnected)
-
 	return nil
 }
 
-func (s *SFTPSession) Write(data []byte) error {
+func (s *FTPSession) Write(data []byte) error {
 	return nil
 }
 
-func (s *SFTPSession) Resize(cols, rows int) error {
+func (s *FTPSession) Resize(cols, rows int) error {
 	return nil
 }
 
-func (s *SFTPSession) Disconnect() error {
-	if s.sftpClient != nil {
-		s.sftpClient.Close()
-	}
-	if s.sshClient != nil {
-		s.sshClient.Close()
+func (s *FTPSession) Disconnect() error {
+	if s.conn != nil {
+		s.conn.Quit()
+		s.conn = nil
 	}
 	s.setStatus(StatusDisconnected)
 	return nil
 }
 
-func (s *SFTPSession) IsConnected() bool {
-	return s.Status() == StatusConnected
+func (s *FTPSession) IsConnected() bool {
+	return s.Status() == StatusConnected && s.conn != nil
 }
 
-// FileItem represents a file entry returned to the frontend.
-type FileItem struct {
-	Name    string `json:"name"`
-	Size    int64  `json:"size"`
-	ModTime string `json:"modTime"`
-	Mode    string `json:"mode"`
-	IsDir   bool   `json:"isDir"`
-	Owner   string `json:"owner"`
-	Group   string `json:"group"`
-}
+// --- Internal helpers ---
 
-// FileListResult wraps files + current directory for a list response.
-type FileListResult struct {
-	Files []FileItem `json:"files"`
-	Dir   string     `json:"dir"`
-}
-
-// TransferTask tracks an ongoing file transfer.
-type TransferTask struct {
-	ID         string
-	Type       string // "upload" | "download"
-	LocalPath  string
-	RemotePath string
-	Progress   int64
-	Total      int64
-	Status     string // "pending" | "running" | "paused" | "done" | "error" | "cancelled"
-	ctx        context.Context
-	cancel     context.CancelFunc
-	paused     bool
-	pauseCh    chan struct{}
-}
-
-func (t *TransferTask) start() {
-	t.ctx, t.cancel = context.WithCancel(context.Background())
-	t.pauseCh = make(chan struct{})
-}
-
-func (t *TransferTask) done() {
-	if t.cancel != nil {
-		t.cancel()
-	}
-}
-
-func (t *TransferTask) waitIfPaused() {
-	for {
-		if t.paused {
-			select {
-			case <-t.pauseCh:
-				continue
-			case <-t.ctx.Done():
-				return
-			}
-		}
-		return
-	}
-}
-
-func (s *SFTPSession) nextTaskID(prefix string) string {
+func (s *FTPSession) nextTaskID(prefix string) string {
 	return fmt.Sprintf("%s-%d", prefix, atomic.AddInt64(&s.taskSeq, 1))
 }
 
-func resolveOwnerGroup(fi os.FileInfo) (string, string) {
-	owner := ""
-	group := ""
-	if stat, ok := fi.Sys().(*sftp.FileStat); ok {
-		if stat.UID > 0 {
-			owner = fmt.Sprintf("%d", stat.UID)
-		}
-		if stat.GID > 0 {
-			group = fmt.Sprintf("%d", stat.GID)
-		}
-	}
-	return owner, group
-}
-
-// --- Public API methods (called from app.go Wails bindings) ---
-
-func (s *SFTPSession) requireClient() error {
-	if s.sftpClient == nil {
-		return fmt.Errorf("SFTP session not connected")
+func (s *FTPSession) requireClient() error {
+	if s.conn == nil {
+		return fmt.Errorf("FTP session not connected")
 	}
 	return nil
 }
 
-func (s *SFTPSession) ListRemote(dir string) (FileListResult, error) {
+func (s *FTPSession) requireConn() (*ftp.ServerConn, error) {
+	if s.conn == nil {
+		return nil, fmt.Errorf("FTP session not connected")
+	}
+	return s.conn, nil
+}
+
+// --- Public API methods ---
+
+func (s *FTPSession) ListRemote(dir string) (FileListResult, error) {
 	if err := s.requireClient(); err != nil {
 		return FileListResult{}, err
 	}
+	s.connMu.Lock()
+	defer s.connMu.Unlock()
 	if dir == "" {
 		dir = s.cwd
 	} else if !path.IsAbs(dir) {
 		dir = path.Join(s.cwd, dir)
 	}
-	infos, err := s.sftpClient.ReadDir(dir)
+	entries, err := s.conn.List(dir)
 	if err != nil {
 		return FileListResult{}, err
 	}
-	files := make([]FileItem, 0, len(infos))
-	for _, fi := range infos {
-		owner, group := resolveOwnerGroup(fi)
-		isDir := fi.IsDir()
-		if fi.Mode()&os.ModeSymlink != 0 {
-			if target, err := s.sftpClient.Stat(path.Join(dir, fi.Name())); err == nil {
-				isDir = target.IsDir()
-			}
+	files := make([]FileItem, 0, len(entries))
+	for _, e := range entries {
+		isDir := e.Type == ftp.EntryTypeFolder
+		modTime := ""
+		if !e.Time.IsZero() {
+			modTime = e.Time.Format(time.RFC3339)
 		}
 		files = append(files, FileItem{
-			Name:    fi.Name(),
-			Size:    fi.Size(),
-			ModTime: fi.ModTime().Format(time.RFC3339),
-			Mode:    fi.Mode().String(),
+			Name:    e.Name,
+			Size:    int64(e.Size),
+			ModTime: modTime,
+			Mode:    ftpEntryMode(e),
 			IsDir:   isDir,
-			Owner:   owner,
-			Group:   group,
 		})
 	}
 	return FileListResult{Files: files, Dir: dir}, nil
 }
 
-func (s *SFTPSession) ListLocal(dir string) (FileListResult, error) {
+func ftpEntryMode(e *ftp.Entry) string {
+	switch e.Type {
+	case ftp.EntryTypeFolder:
+		return "drwxr-xr-x"
+	case ftp.EntryTypeLink:
+		return "Lrwxrwxrwx"
+	default:
+		return "-rw-r--r--"
+	}
+}
+
+func (s *FTPSession) ListLocal(dir string) (FileListResult, error) {
 	if dir == "" {
 		dir = s.localCwd
 	} else if !filepath.IsAbs(dir) {
@@ -294,7 +233,7 @@ func (s *SFTPSession) ListLocal(dir string) (FileListResult, error) {
 	return FileListResult{Files: files, Dir: dir}, nil
 }
 
-func (s *SFTPSession) ListLocalDrives() ([]FileItem, error) {
+func (s *FTPSession) ListLocalDrives() ([]FileItem, error) {
 	var drives []FileItem
 	for _, letter := range "ABCDEFGHIJKLMNOPQRSTUVWXYZ" {
 		root := string(letter) + ":\\"
@@ -315,7 +254,7 @@ func (s *SFTPSession) ListLocalDrives() ([]FileItem, error) {
 	return drives, nil
 }
 
-func (s *SFTPSession) ChangeRemoteDir(dir string) (FileListResult, error) {
+func (s *FTPSession) ChangeRemoteDir(dir string) (FileListResult, error) {
 	if err := s.requireClient(); err != nil {
 		return FileListResult{}, err
 	}
@@ -323,21 +262,33 @@ func (s *SFTPSession) ChangeRemoteDir(dir string) (FileListResult, error) {
 	if !path.IsAbs(dir) {
 		target = path.Join(s.cwd, dir)
 	}
-	fi, err := s.sftpClient.Stat(target)
+	// Validate directory exists by listing it
+	entries, err := s.conn.List(target)
 	if err != nil {
 		return FileListResult{}, fmt.Errorf("no such directory: %s", target)
 	}
-	if !fi.IsDir() {
-		return FileListResult{}, fmt.Errorf("not a directory: %s", target)
-	}
-	real, _ := s.sftpClient.RealPath(target)
 	s.mu.Lock()
-	s.cwd = real
+	s.cwd = target
 	s.mu.Unlock()
-	return s.ListRemote(real)
+	files := make([]FileItem, 0, len(entries))
+	for _, e := range entries {
+		isDir := e.Type == ftp.EntryTypeFolder
+		modTime := ""
+		if !e.Time.IsZero() {
+			modTime = e.Time.Format(time.RFC3339)
+		}
+		files = append(files, FileItem{
+			Name:    e.Name,
+			Size:    int64(e.Size),
+			ModTime: modTime,
+			Mode:    ftpEntryMode(e),
+			IsDir:   isDir,
+		})
+	}
+	return FileListResult{Files: files, Dir: target}, nil
 }
 
-func (s *SFTPSession) ChangeLocalDir(dir string) (FileListResult, error) {
+func (s *FTPSession) ChangeLocalDir(dir string) (FileListResult, error) {
 	target := dir
 	if !filepath.IsAbs(dir) {
 		target = filepath.Join(s.localCwd, dir)
@@ -356,48 +307,50 @@ func (s *SFTPSession) ChangeLocalDir(dir string) (FileListResult, error) {
 	return s.ListLocal(abs)
 }
 
-func (s *SFTPSession) MakeDir(dir string) error {
+func (s *FTPSession) MakeDir(dir string) error {
 	if err := s.requireClient(); err != nil {
 		return err
 	}
+	s.connMu.Lock()
+	defer s.connMu.Unlock()
 	p := dir
 	if !path.IsAbs(p) {
 		p = path.Join(s.cwd, p)
 	}
-	return s.sftpClient.Mkdir(p)
+	return s.conn.MakeDir(p)
 }
 
-func (s *SFTPSession) Remove(p string, recursive bool) error {
+func (s *FTPSession) Remove(p string, recursive bool) error {
 	if err := s.requireClient(); err != nil {
 		return err
 	}
+	s.connMu.Lock()
+	defer s.connMu.Unlock()
 	if !path.IsAbs(p) {
 		p = path.Join(s.cwd, p)
 	}
 	if recursive {
 		return s.rmRecursive(p)
 	}
-	fi, err := s.sftpClient.Stat(p)
-	if err != nil {
-		return err
+	// Try file deletion first; if that fails (e.g. it's a directory), try RemoveDir
+	err := s.conn.Delete(p)
+	if err == nil {
+		return nil
 	}
-	if fi.IsDir() {
-		infos, err := s.sftpClient.ReadDir(p)
-		if err != nil {
-			return err
-		}
-		if len(infos) > 0 {
-			return fmt.Errorf("directory not empty (%d items), use recursive=true", len(infos))
-		}
-		return s.sftpClient.RemoveDirectory(p)
+	// Not a plain file — check if it's an empty directory
+	entries, listErr := s.conn.List(p)
+	if listErr == nil && len(entries) > 0 {
+		return fmt.Errorf("directory not empty (%d items), use recursive=true", len(entries))
 	}
-	return s.sftpClient.Remove(p)
+	return s.conn.RemoveDir(p)
 }
 
-func (s *SFTPSession) Rename(oldName, newName string) error {
+func (s *FTPSession) Rename(oldName, newName string) error {
 	if err := s.requireClient(); err != nil {
 		return err
 	}
+	s.connMu.Lock()
+	defer s.connMu.Unlock()
 	old := oldName
 	if !path.IsAbs(old) {
 		old = path.Join(s.cwd, old)
@@ -406,20 +359,14 @@ func (s *SFTPSession) Rename(oldName, newName string) error {
 	if !path.IsAbs(newPath) {
 		newPath = path.Join(s.cwd, newPath)
 	}
-	return s.sftpClient.Rename(old, newPath)
+	return s.conn.Rename(old, newPath)
 }
 
-func (s *SFTPSession) Chmod(p string, mode os.FileMode) error {
-	if err := s.requireClient(); err != nil {
-		return err
-	}
-	if !path.IsAbs(p) {
-		p = path.Join(s.cwd, p)
-	}
-	return s.sftpClient.Chmod(p, mode)
+func (s *FTPSession) Chmod(p string, mode os.FileMode) error {
+	return fmt.Errorf("FTP does not support chmod")
 }
 
-func (s *SFTPSession) Get(remotePath, localPath string, recursive bool) (string, error) {
+func (s *FTPSession) Get(remotePath, localPath string, recursive bool) (string, error) {
 	if err := s.requireClient(); err != nil {
 		return "", err
 	}
@@ -477,7 +424,7 @@ func (s *SFTPSession) Get(remotePath, localPath string, recursive bool) (string,
 	return task.ID, nil
 }
 
-func (s *SFTPSession) Put(localPath, remotePath string, recursive bool) (string, error) {
+func (s *FTPSession) Put(localPath, remotePath string, recursive bool) (string, error) {
 	if err := s.requireClient(); err != nil {
 		return "", err
 	}
@@ -537,7 +484,7 @@ func (s *SFTPSession) Put(localPath, remotePath string, recursive bool) (string,
 
 // --- Local file operations ---
 
-func (s *SFTPSession) LocalRemove(p string, recursive bool) error {
+func (s *FTPSession) LocalRemove(p string, recursive bool) error {
 	if !filepath.IsAbs(p) {
 		p = filepath.Join(s.localCwd, p)
 	}
@@ -560,7 +507,7 @@ func (s *SFTPSession) LocalRemove(p string, recursive bool) error {
 	return os.Remove(p)
 }
 
-func (s *SFTPSession) LocalRename(oldName, newName string) error {
+func (s *FTPSession) LocalRename(oldName, newName string) error {
 	old := oldName
 	if !filepath.IsAbs(old) {
 		old = filepath.Join(s.localCwd, old)
@@ -572,7 +519,7 @@ func (s *SFTPSession) LocalRename(oldName, newName string) error {
 	return os.Rename(old, newPath)
 }
 
-func (s *SFTPSession) LocalMkdir(dir string) error {
+func (s *FTPSession) LocalMkdir(dir string) error {
 	p := dir
 	if !filepath.IsAbs(p) {
 		p = filepath.Join(s.localCwd, p)
@@ -580,8 +527,8 @@ func (s *SFTPSession) LocalMkdir(dir string) error {
 	return os.MkdirAll(p, 0755)
 }
 
-// PutContent writes raw content directly to a remote file via SFTP.
-func (s *SFTPSession) PutContent(remotePath string, content []byte) error {
+// PutContent writes raw content directly to a remote file via FTP.
+func (s *FTPSession) PutContent(remotePath string, content []byte) error {
 	if err := s.requireClient(); err != nil {
 		return err
 	}
@@ -591,20 +538,32 @@ func (s *SFTPSession) PutContent(remotePath string, content []byte) error {
 	}
 	// Ensure parent directory exists
 	parentDir := path.Dir(rp)
-	if err := s.sftpClient.MkdirAll(parentDir); err != nil {
+	if err := s.mkdirAllRemote(parentDir); err != nil {
 		return err
 	}
-	f, err := s.sftpClient.Create(rp)
-	if err != nil {
+	reader := strings.NewReader(string(content))
+	return s.conn.Stor(rp, reader)
+}
+
+// mkdirAllRemote creates intermediate directories as needed.
+func (s *FTPSession) mkdirAllRemote(dir string) error {
+	if dir == "/" || dir == "." || dir == "" {
+		return nil
+	}
+	// Try to list the directory; if it fails, create parent then this one
+	_, err := s.conn.List(dir)
+	if err == nil {
+		return nil // already exists
+	}
+	// Create parent first
+	if err := s.mkdirAllRemote(path.Dir(dir)); err != nil {
 		return err
 	}
-	defer f.Close()
-	_, err = f.Write(content)
-	return err
+	return s.conn.MakeDir(dir)
 }
 
 // CancelTransfer cancels an ongoing transfer task.
-func (s *SFTPSession) CancelTransfer(taskID string) error {
+func (s *FTPSession) CancelTransfer(taskID string) error {
 	s.mu.Lock()
 	task, ok := s.transfers[taskID]
 	s.mu.Unlock()
@@ -618,7 +577,7 @@ func (s *SFTPSession) CancelTransfer(taskID string) error {
 }
 
 // PauseTransfer pauses an ongoing transfer task.
-func (s *SFTPSession) PauseTransfer(taskID string) error {
+func (s *FTPSession) PauseTransfer(taskID string) error {
 	s.mu.Lock()
 	task, ok := s.transfers[taskID]
 	s.mu.Unlock()
@@ -632,7 +591,7 @@ func (s *SFTPSession) PauseTransfer(taskID string) error {
 }
 
 // ResumeTransfer resumes a paused transfer task.
-func (s *SFTPSession) ResumeTransfer(taskID string) error {
+func (s *FTPSession) ResumeTransfer(taskID string) error {
 	s.mu.Lock()
 	task, ok := s.transfers[taskID]
 	s.mu.Unlock()
@@ -641,56 +600,56 @@ func (s *SFTPSession) ResumeTransfer(taskID string) error {
 	}
 	task.paused = false
 	task.Status = "running"
-		close(task.pauseCh)
-		task.pauseCh = make(chan struct{})
-		s.emitTransferStart(task)
-		return nil
-	}
+	close(task.pauseCh)
+	task.pauseCh = make(chan struct{})
+	s.emitTransferStart(task)
+	return nil
+}
 
 // --- Recursive helpers ---
 
-func (s *SFTPSession) rmRecursive(p string) error {
-	fi, err := s.sftpClient.Stat(p)
+func (s *FTPSession) rmRecursive(p string) error {
+	entries, err := s.conn.List(p)
 	if err != nil {
-		return err
+		// Not a directory or cannot list; try deleting as file
+		return s.conn.Delete(p)
 	}
-	if fi.IsDir() {
-		infos, err := s.sftpClient.ReadDir(p)
-		if err != nil {
-			return err
-		}
-		for _, info := range infos {
-			childPath := path.Join(p, info.Name())
+	for _, e := range entries {
+		childPath := path.Join(p, e.Name)
+		if e.Type == ftp.EntryTypeFolder {
 			if err := s.rmRecursive(childPath); err != nil {
 				return err
 			}
+		} else {
+			if err := s.conn.Delete(childPath); err != nil {
+				return err
+			}
 		}
-		return s.sftpClient.RemoveDirectory(p)
 	}
-	return s.sftpClient.Remove(p)
+	return s.conn.RemoveDir(p)
 }
 
-func (s *SFTPSession) dirSizeRemote(dir string) (int64, error) {
-	infos, err := s.sftpClient.ReadDir(dir)
+func (s *FTPSession) dirSizeRemote(dir string) (int64, error) {
+	entries, err := s.conn.List(dir)
 	if err != nil {
 		return 0, err
 	}
 	var total int64
-	for _, fi := range infos {
-		if fi.IsDir() {
-			sz, err := s.dirSizeRemote(path.Join(dir, fi.Name()))
+	for _, e := range entries {
+		if e.Type == ftp.EntryTypeFolder {
+			sz, err := s.dirSizeRemote(path.Join(dir, e.Name))
 			if err != nil {
 				return 0, err
 			}
 			total += sz
 		} else {
-			total += fi.Size()
+			total += int64(e.Size)
 		}
 	}
 	return total, nil
 }
 
-func (s *SFTPSession) dirSizeLocal(dir string) (int64, error) {
+func (s *FTPSession) dirSizeLocal(dir string) (int64, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return 0, err
@@ -716,7 +675,7 @@ func (s *SFTPSession) dirSizeLocal(dir string) (int64, error) {
 
 // --- Transfer methods ---
 
-func (s *SFTPSession) startTransfer(task *TransferTask) {
+func (s *FTPSession) startTransfer(task *TransferTask) {
 	task.start()
 	s.mu.Lock()
 	s.transfers[task.ID] = task
@@ -728,37 +687,29 @@ func (s *SFTPSession) startTransfer(task *TransferTask) {
 			delete(s.transfers, task.ID)
 			s.mu.Unlock()
 		}()
+
 		task.Status = "running"
 		s.emitTransferStart(task)
 
-		// Acquire concurrency slot
-		if s.sem != nil {
-			select {
-			case s.sem <- struct{}{}:
-			defer func() { <-s.sem }()
-			case <-task.ctx.Done():
-				task.Status = "cancelled"
-				s.emitTransferComplete(task)
-				return
-			}
-		}
+		// FTP control connection: serialize data transfers
+		s.connMu.Lock()
+		defer s.connMu.Unlock()
 
-		var src io.Reader
-		var dst io.Writer
-
+		var err error
 		if task.Type == "download" {
-			remoteFile, e := s.sftpClient.Open(task.RemotePath)
+			resp, e := s.conn.Retr(task.RemotePath)
 			if e != nil {
 				task.Status = "error"
 				s.emitTransferEvent(task, e)
 				return
 			}
-			defer remoteFile.Close()
-			fi, _ := remoteFile.Stat()
-			if fi != nil {
-				task.Total = fi.Size()
+			defer resp.Close()
+
+			fi, e := s.conn.FileSize(task.RemotePath)
+			if e == nil && fi > 0 {
+				task.Total = fi
 			}
-			src = remoteFile
+
 			localFile, e := os.Create(task.LocalPath)
 			if e != nil {
 				task.Status = "error"
@@ -766,7 +717,8 @@ func (s *SFTPSession) startTransfer(task *TransferTask) {
 				return
 			}
 			defer localFile.Close()
-			dst = localFile
+
+			_, err = io.Copy(localFile, &progressReader{r: resp, task: task, s: s})
 		} else {
 			localFile, e := os.Open(task.LocalPath)
 			if e != nil {
@@ -775,59 +727,43 @@ func (s *SFTPSession) startTransfer(task *TransferTask) {
 				return
 			}
 			defer localFile.Close()
+
 			fi, _ := localFile.Stat()
 			if fi != nil {
 				task.Total = fi.Size()
 			}
-			src = localFile
-			remoteFile, e := s.sftpClient.Create(task.RemotePath)
-			if e != nil {
-				task.Status = "error"
-				s.emitTransferEvent(task, e)
-				return
-			}
-			defer remoteFile.Close()
-			dst = remoteFile
+
+			err = s.conn.Stor(task.RemotePath, &progressReader{r: localFile, task: task, s: s})
 		}
 
-		buf := make([]byte, 64*1024)
-		for {
-			select {
-			case <-task.ctx.Done():
-				task.Status = "cancelled"
-				s.emitTransferComplete(task)
-				return
-			default:
-			}
-			task.waitIfPaused()
-			select {
-			case <-task.ctx.Done():
-				task.Status = "cancelled"
-				s.emitTransferComplete(task)
-				return
-			default:
-			}
-			n, e := src.Read(buf)
-			if n > 0 {
-				dst.Write(buf[:n])
-				task.Progress += int64(n)
-				s.emitTransferProgress(task)
-			}
-			if e == io.EOF {
-				break
-			}
-			if e != nil {
-				task.Status = "error"
-				s.emitTransferEvent(task, e)
-				return
-			}
+		if err != nil {
+			task.Status = "error"
+			s.emitTransferEvent(task, err)
+			return
 		}
 		task.Status = "done"
 		s.emitTransferComplete(task)
 	}()
 }
 
-func (s *SFTPSession) downloadDir(remoteDir, localDir string, task *TransferTask) error {
+type progressReader struct {
+	r    io.Reader
+	task *TransferTask
+	s    *FTPSession
+}
+
+func (pr *progressReader) Read(p []byte) (int, error) {
+	n, err := pr.r.Read(p)
+	if n > 0 {
+		pr.task.Progress += int64(n)
+		pr.s.emitTransferProgress(pr.task)
+	}
+	return n, err
+}
+
+// --- Recursive transfer ---
+
+func (s *FTPSession) downloadDir(remoteDir, localDir string, task *TransferTask) error {
 	select {
 	case <-task.ctx.Done():
 		return task.ctx.Err()
@@ -836,19 +772,19 @@ func (s *SFTPSession) downloadDir(remoteDir, localDir string, task *TransferTask
 	if err := os.MkdirAll(localDir, 0755); err != nil {
 		return err
 	}
-	infos, err := s.sftpClient.ReadDir(remoteDir)
+	entries, err := s.conn.List(remoteDir)
 	if err != nil {
 		return err
 	}
-	for _, fi := range infos {
-		rp := path.Join(remoteDir, fi.Name())
-		lp := filepath.Join(localDir, fi.Name())
-		if fi.IsDir() {
+	for _, e := range entries {
+		rp := path.Join(remoteDir, e.Name)
+		lp := filepath.Join(localDir, e.Name)
+		if e.Type == ftp.EntryTypeFolder {
 			if err := s.downloadDir(rp, lp, task); err != nil {
 				return err
 			}
 		} else {
-			if err := s.transferFile(task, rp, lp, "download"); err != nil {
+			if err := s.transferFile(task, lp, rp, "download"); err != nil {
 				return err
 			}
 		}
@@ -856,13 +792,13 @@ func (s *SFTPSession) downloadDir(remoteDir, localDir string, task *TransferTask
 	return nil
 }
 
-func (s *SFTPSession) uploadDir(localDir, remoteDir string, task *TransferTask) error {
+func (s *FTPSession) uploadDir(localDir, remoteDir string, task *TransferTask) error {
 	select {
 	case <-task.ctx.Done():
 		return task.ctx.Err()
 	default:
 	}
-	if err := s.sftpClient.MkdirAll(remoteDir); err != nil {
+	if err := s.mkdirAllRemote(remoteDir); err != nil {
 		return err
 	}
 	entries, err := os.ReadDir(localDir)
@@ -885,13 +821,13 @@ func (s *SFTPSession) uploadDir(localDir, remoteDir string, task *TransferTask) 
 	return nil
 }
 
-func (s *SFTPSession) transferFile(task *TransferTask, localPath, remotePath, tfType string) error {
+func (s *FTPSession) transferFile(task *TransferTask, localPath, remotePath, tfType string) error {
 	if tfType == "download" {
-		src, err := s.sftpClient.Open(remotePath)
+		resp, err := s.conn.Retr(remotePath)
 		if err != nil {
 			return err
 		}
-		defer src.Close()
+		defer resp.Close()
 		dst, err := os.Create(localPath)
 		if err != nil {
 			return err
@@ -904,7 +840,7 @@ func (s *SFTPSession) transferFile(task *TransferTask, localPath, remotePath, tf
 				return task.ctx.Err()
 			default:
 			}
-			n, e := src.Read(buf)
+			n, e := resp.Read(buf)
 			if n > 0 {
 				dst.Write(buf[:n])
 				task.Progress += int64(n)
@@ -920,21 +856,26 @@ func (s *SFTPSession) transferFile(task *TransferTask, localPath, remotePath, tf
 			return err
 		}
 		defer src.Close()
-		dst, err := s.sftpClient.Create(remotePath)
-		if err != nil {
-			return err
-		}
-		defer dst.Close()
+		pr, pw := io.Pipe()
+		doneCh := make(chan error, 1)
+		go func() {
+			doneCh <- s.conn.Stor(remotePath, pr)
+		}()
 		buf := make([]byte, 64*1024)
 		for {
 			select {
 			case <-task.ctx.Done():
+				pw.CloseWithError(task.ctx.Err())
 				return task.ctx.Err()
 			default:
 			}
 			n, e := src.Read(buf)
 			if n > 0 {
-				dst.Write(buf[:n])
+				_, we := pw.Write(buf[:n])
+				if we != nil {
+					pw.Close()
+					return we
+				}
 				task.Progress += int64(n)
 				s.emitTransferProgress(task)
 			}
@@ -942,13 +883,18 @@ func (s *SFTPSession) transferFile(task *TransferTask, localPath, remotePath, tf
 				break
 			}
 		}
+		pw.Close()
+		// Wait for Stor to complete
+		if err := <-doneCh; err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
 // --- Transfer event emitters ---
 
-func (s *SFTPSession) emitTransferStart(task *TransferTask) {
+func (s *FTPSession) emitTransferStart(task *TransferTask) {
 	name := filepath.Base(task.LocalPath)
 	if task.Type == "download" {
 		name = path.Base(task.RemotePath)
@@ -965,7 +911,7 @@ func (s *SFTPSession) emitTransferStart(task *TransferTask) {
 	s.emitData([]byte("\x1b]633;S" + string(jsonBytes) + "\x07"))
 }
 
-func (s *SFTPSession) emitTransferProgress(task *TransferTask) {
+func (s *FTPSession) emitTransferProgress(task *TransferTask) {
 	payload := map[string]interface{}{
 		"type":     "sftp:transfer",
 		"taskId":   task.ID,
@@ -977,7 +923,7 @@ func (s *SFTPSession) emitTransferProgress(task *TransferTask) {
 	s.emitData([]byte("\x1b]633;S" + string(jsonBytes) + "\x07"))
 }
 
-func (s *SFTPSession) emitTransferComplete(task *TransferTask) {
+func (s *FTPSession) emitTransferComplete(task *TransferTask) {
 	payload := map[string]interface{}{
 		"type":   "sftp:transfer",
 		"taskId": task.ID,
@@ -988,7 +934,7 @@ func (s *SFTPSession) emitTransferComplete(task *TransferTask) {
 	s.emitData([]byte("\x1b]633;S" + string(jsonBytes) + "\x07"))
 }
 
-func (s *SFTPSession) emitTransferEvent(task *TransferTask, err error) {
+func (s *FTPSession) emitTransferEvent(task *TransferTask, err error) {
 	payload := map[string]interface{}{
 		"type":   "sftp:transfer",
 		"taskId": task.ID,

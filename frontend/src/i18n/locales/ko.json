@@ -13,6 +13,7 @@
   "sidebar.connect": "연결",
   "sidebar.connectSSH": "SSH 연결",
   "sidebar.connectSftp": "SFTP 연결",
+  "sidebar.connectFtp": "FTP 연결",
   "sidebar.edit": "편집",
   "sidebar.duplicate": "세션 복제",
   "sidebar.delete": "삭제",
@@ -546,5 +547,12 @@
   "db.addPkNullableWarn": "다음 NULL 허용 컬럼이 NOT NULL로 설정됩니다: {columns}",
   "db.autoIncrementTypeWarn": "AUTO_INCREMENT는 정수형 컬럼 유형(INT, BIGINT 등)이 필요합니다",
   "conn.tunnel": "SSH Tunnel",
-  "conn.tunnelPlaceholder": "Select SSH connection as jump host..."
+  "conn.tunnelPlaceholder": "Select SSH connection as jump host...",
+  "conn.categoryFileTransfer": "File Transfer",
+  "conn.ftpEncryption": "TLS Encryption",
+  "conn.ftpEncryptionNone": "None",
+  "conn.ftpEncryptionAuto": "If Available",
+  "conn.ftpEncryptionRequired": "Required",
+  "conn.ftpPassive": "Passive Mode",
+  "conn.ftpEncoding": "Encoding"
 }

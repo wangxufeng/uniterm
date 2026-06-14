@@ -25,6 +25,7 @@
       <el-form-item :label="t('conn.type')">
         <el-radio-group :model-value="category" @change="onCategoryChange">
           <el-radio-button value="terminal">{{ t('conn.categoryTerminal') }}</el-radio-button>
+          <el-radio-button value="filetransfer">{{ t('conn.categoryFileTransfer') }}</el-radio-button>
           <el-radio-button value="remote">{{ t('conn.categoryRemote') }}</el-radio-button>
           <el-radio-button value="database">{{ t('db.database') }}</el-radio-button>
         </el-radio-group>
@@ -32,9 +33,15 @@
       <el-form-item v-if="category" label="">
         <template v-if="category === 'terminal'">
           <el-radio-group v-model="form.type">
-            <el-radio-button label="ssh">SSH</el-radio-button>
+            <el-radio-button label="ssh">SSH (SFTP)</el-radio-button>
             <el-radio-button label="telnet">Telnet</el-radio-button>
             <el-radio-button label="mosh">Mosh</el-radio-button>
+          </el-radio-group>
+        </template>
+        <template v-if="category === 'filetransfer'">
+          <el-radio-group v-model="form.type">
+            <el-radio-button label="ftp">FTP</el-radio-button>
+            <el-radio-button label="ssh">SSH (SFTP)</el-radio-button>
           </el-radio-group>
         </template>
         <template v-if="category === 'remote'">
@@ -67,7 +74,7 @@
           <el-radio-button label="key">{{ t('conn.keyPath') }}</el-radio-button>
         </el-radio-group>
       </el-form-item>
-      <el-form-item v-if="(form.authType === 'password' || form.type === 'rdp' || form.type === 'vnc' || form.type === 'spice' || form.type === 'database' || form.type === 'mosh' || form.type === 'telnet') && !(form.type === 'database' && form.dbType === 'rqlite')" :label="t('conn.password')">
+      <el-form-item v-if="(form.authType === 'password' || form.type === 'rdp' || form.type === 'vnc' || form.type === 'spice' || form.type === 'database' || form.type === 'mosh' || form.type === 'telnet' || form.type === 'ftp') && !(form.type === 'database' && form.dbType === 'rqlite')" :label="t('conn.password')">
         <el-input v-model="form.password" type="password" show-password :key="passwordInputKey" />
       </el-form-item>
       <el-form-item v-if="form.authType === 'key' && (form.type === 'ssh' || form.type === 'mosh')" :label="t('conn.keyPath')">
@@ -99,6 +106,29 @@
           :placeholder="t('conn.postLoginScriptPlaceholder')"
         />
       </el-form-item>
+      <el-form-item v-if="form.type === 'ssh'" :label="t('conn.sftpMaxConcurrency')">
+        <el-input-number v-model="form.sftpMaxConcurrency" :min="0" :max="20" />
+      </el-form-item>
+      <template v-if="form.type === 'ftp'">
+        <el-form-item :label="t('conn.ftpEncryption')">
+          <el-select v-model="form.ftpEncryption">
+            <el-option :label="t('conn.ftpEncryptionNone')" value="none" />
+            <el-option :label="t('conn.ftpEncryptionAuto')" value="auto" />
+            <el-option :label="t('conn.ftpEncryptionRequired')" value="required" />
+          </el-select>
+        </el-form-item>
+        <el-form-item :label="t('conn.ftpPassive')">
+          <el-switch v-model="form.ftpPassive" />
+        </el-form-item>
+        <el-form-item :label="t('conn.ftpEncoding')">
+          <el-select v-model="form.ftpEncoding" placeholder="UTF-8">
+            <el-option label="UTF-8" value="utf-8" />
+            <el-option label="GBK" value="gbk" />
+            <el-option label="Shift-JIS" value="shift-jis" />
+            <el-option label="Latin-1" value="latin-1" />
+          </el-select>
+        </el-form-item>
+      </template>
       <el-form-item v-if="showTunnel" :label="t('conn.tunnel')">
         <el-select
           v-model="form.tunnelSSHConnId"
@@ -184,9 +214,11 @@ const isEdit = computed(() => !!props.editConfig?.id)
 
 const TERMINAL_TYPES = ['ssh', 'telnet', 'mosh']
 const REMOTE_TYPES = ['rdp', 'vnc', 'spice']
+const FILETRANSFER_TYPES = ['ftp', 'ssh']
 
 const category = computed(() => {
   if (TERMINAL_TYPES.includes(form.type)) return 'terminal'
+  if (FILETRANSFER_TYPES.includes(form.type)) return 'filetransfer'
   if (REMOTE_TYPES.includes(form.type)) return 'remote'
   if (form.type === 'database') return 'database'
   return 'terminal'
@@ -207,6 +239,9 @@ function onCategoryChange(cat: string) {
   if (cat === 'terminal') {
     form.type = 'ssh'
     if (!isEdit.value) form.port = 22
+  } else if (cat === 'filetransfer') {
+    form.type = 'ftp'
+    if (!isEdit.value) form.port = 21
   } else if (cat === 'remote') {
     form.type = isWindows.value ? 'rdp' : 'vnc'
     if (!isEdit.value) form.port = isWindows.value ? 3389 : 5900
@@ -234,6 +269,10 @@ const form = reactive<ConnectionConfig>({
   dbType: '',
   dbName: '',
   postLoginScript: '',
+  sftpMaxConcurrency: 5,
+  ftpEncryption: 'none',
+  ftpPassive: true,
+  ftpEncoding: 'utf-8',
 })
 
 const rdpResolutions = [
@@ -293,6 +332,7 @@ watch(() => form.type, (newType) => {
   else if (newType === 'vnc') form.port = 5900
   else if (newType === 'spice') form.port = 5900
   else if (newType === 'database') form.port = 3306
+  else if (newType === 'ftp') form.port = 21
   if (REMOTE_TYPES.includes(newType) || newType === 'database') {
     form.authType = 'password'
   }
@@ -332,6 +372,10 @@ function resetForm() {
   form.dbType = ''
   form.dbName = ''
   form.postLoginScript = ''
+  form.sftpMaxConcurrency = 5
+  form.ftpEncryption = 'none'
+  form.ftpPassive = true
+  form.ftpEncoding = 'utf-8'
   form.tunnelSSHConnId = undefined
   rdpResolution.value = '1280 × 720 (HD)'
   selectedGroupId.value = undefined

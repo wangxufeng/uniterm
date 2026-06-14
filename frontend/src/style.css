@@ -37,8 +37,8 @@
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
 
   /* Fonts */
-  --font-ui: 'Space Grotesk', -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-ui: 'Space Grotesk', 'Microsoft YaHei', 'PingFang SC', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
 
   /* Spacing */
   --radius-sm: 4px;

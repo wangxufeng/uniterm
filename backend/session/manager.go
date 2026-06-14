@@ -54,6 +54,9 @@ func (sm *SessionManager) Create(sessionType string, config ConnectionConfig) (S
 		case "spice":
 			s = NewSPICESession(config.ID)
 
+		case "ftp":
+			s = NewFTPSession(config.ID)
+
 	default:
 		return nil, fmt.Errorf("unsupported session type: %s", sessionType)
 	}

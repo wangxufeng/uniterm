@@ -13,6 +13,7 @@
   "sidebar.connect": "Connect",
   "sidebar.connectSSH": "Connect SSH",
   "sidebar.connectSftp": "Connect SFTP",
+  "sidebar.connectFtp": "Connect FTP",
   "sidebar.edit": "Edit",
   "sidebar.duplicate": "Duplicate Session",
   "sidebar.delete": "Delete",
@@ -44,6 +45,7 @@
   "conn.hostRequired": "Host is required",
   "conn.postLoginScript": "Post-login Script",
   "conn.postLoginScriptPlaceholder": "One command per line, executed sequentially after login",
+  "conn.sftpMaxConcurrency": "SFTP Max Concurrent Transfers",
   "conn.group": "Group",
   "conn.noGroup": "(No Group)",
   "conn.newGroup": "+ New Group",
@@ -546,5 +548,12 @@
   "db.addPkNullableWarn": "The following nullable columns will be set to NOT NULL: {columns}",
   "db.autoIncrementTypeWarn": "AUTO_INCREMENT requires an integer column type (INT, BIGINT, etc.)",
   "conn.tunnel": "SSH Tunnel",
-  "conn.tunnelPlaceholder": "Select SSH connection as jump host..."
+  "conn.tunnelPlaceholder": "Select SSH connection as jump host...",
+  "conn.categoryFileTransfer": "File Transfer",
+  "conn.ftpEncryption": "TLS Encryption",
+  "conn.ftpEncryptionNone": "None",
+  "conn.ftpEncryptionAuto": "If Available",
+  "conn.ftpEncryptionRequired": "Required",
+  "conn.ftpPassive": "Passive Mode",
+  "conn.ftpEncoding": "Encoding"
 }

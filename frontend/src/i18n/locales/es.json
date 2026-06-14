@@ -13,6 +13,7 @@
   "sidebar.connect": "Conectar",
   "sidebar.connectSSH": "Conectar SSH",
   "sidebar.connectSftp": "Conectar SFTP",
+  "sidebar.connectFtp": "Conectar FTP",
   "sidebar.edit": "Editar",
   "sidebar.duplicate": "Duplicar Sesión",
   "sidebar.delete": "Eliminar",
@@ -546,5 +547,12 @@
   "db.addPkNullableWarn": "Las siguientes columnas nullable se establecerán como NOT NULL: {columns}",
   "db.autoIncrementTypeWarn": "AUTO_INCREMENT requiere un tipo de columna entero (INT, BIGINT, etc.)",
   "conn.tunnel": "SSH Tunnel",
-  "conn.tunnelPlaceholder": "Select SSH connection as jump host..."
+  "conn.tunnelPlaceholder": "Select SSH connection as jump host...",
+  "conn.categoryFileTransfer": "File Transfer",
+  "conn.ftpEncryption": "TLS Encryption",
+  "conn.ftpEncryptionNone": "None",
+  "conn.ftpEncryptionAuto": "If Available",
+  "conn.ftpEncryptionRequired": "Required",
+  "conn.ftpPassive": "Passive Mode",
+  "conn.ftpEncoding": "Encoding"
 }

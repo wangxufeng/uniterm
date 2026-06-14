@@ -8,7 +8,7 @@ export interface ConnectionGroup {
 export interface ConnectionConfig {
   id: string
   name: string
-  type: 'ssh' | 'telnet' | 'mosh' | 'rdp' | 'vnc' | 'spice' | 'database' | 'local' | 'sftp' | 'monitor'
+  type: 'ssh' | 'telnet' | 'mosh' | 'rdp' | 'vnc' | 'spice' | 'database' | 'local' | 'sftp' | 'monitor' | 'ftp'
   host: string
   port: number
   user: string
@@ -27,6 +27,12 @@ export interface ConnectionConfig {
   postLoginScript?: string
   // SSH tunnel: reference to an existing SSH connection used as a jump host
   tunnelSSHConnId?: string
+  // SFTP max concurrent transfers (0 = unlimited)
+  sftpMaxConcurrency?: number
+  // FTP-specific
+  ftpEncryption?: string  // "none" | "auto" | "required"
+  ftpPassive?: boolean
+  ftpEncoding?: string    // "utf-8" | "gbk" | "shift-jis" | "latin-1"
 }
 
 export interface SessionInfo {

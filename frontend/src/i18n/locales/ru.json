@@ -13,6 +13,7 @@
   "sidebar.connect": "Подключиться",
   "sidebar.connectSSH": "Подключиться по SSH",
   "sidebar.connectSftp": "Подключиться по SFTP",
+  "sidebar.connectFtp": "Подключиться по FTP",
   "sidebar.edit": "Редактировать",
   "sidebar.duplicate": "Дублировать сессию",
   "sidebar.delete": "Удалить",
@@ -546,5 +547,12 @@
   "db.addPkNullableWarn": "Следующие nullable-столбцы будут установлены в NOT NULL: {columns}",
   "db.autoIncrementTypeWarn": "AUTO_INCREMENT требует целочисленный тип столбца (INT, BIGINT и т.д.)",
   "conn.tunnel": "SSH Tunnel",
-  "conn.tunnelPlaceholder": "Select SSH connection as jump host..."
+  "conn.tunnelPlaceholder": "Select SSH connection as jump host...",
+  "conn.categoryFileTransfer": "File Transfer",
+  "conn.ftpEncryption": "TLS Encryption",
+  "conn.ftpEncryptionNone": "None",
+  "conn.ftpEncryptionAuto": "If Available",
+  "conn.ftpEncryptionRequired": "Required",
+  "conn.ftpPassive": "Passive Mode",
+  "conn.ftpEncoding": "Encoding"
 }

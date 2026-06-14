@@ -205,8 +205,11 @@
       :style="menuStyle"
       @click.stop
     >
-      <div v-if="selectedConn && (selectedConn.type === 'ssh' || selectedConn.type === 'telnet' || selectedConn.type === 'mosh')" class="menu-item" @click="doConnect">{{ connectLabel }}</div>
+      <div v-if="selectedConn && selectedConn.type === 'ssh'" class="menu-item" @click="doConnect">{{ t('sidebar.connectSSH') }}</div>
+      <div v-if="selectedConn && selectedConn.type === 'telnet'" class="menu-item" @click="doConnect">{{ t('sidebar.connectTelnet') }}</div>
+      <div v-if="selectedConn && selectedConn.type === 'mosh'" class="menu-item" @click="doConnect">{{ t('sidebar.connectMosh') }}</div>
       <div v-if="selectedConn && selectedConn.type === 'ssh'" class="menu-item" @click="doConnectSFTP">{{ t('sidebar.connectSftp') }}</div>
+      <div v-if="selectedConn && selectedConn.type === 'ftp'" class="menu-item" @click="doConnectFTP">{{ t('sidebar.connectFtp') }}</div>
       <div v-if="selectedConn && selectedConn.type === 'ssh'" class="menu-item" @click="doConnectMonitor">{{ t('sidebar.connectMonitor') }}</div>
       <div v-if="selectedConn && selectedConn.type === 'rdp'" class="menu-item" @click="doConnectRDP">{{ t('sidebar.connectRDP') }}</div>
       <div v-if="selectedConn && selectedConn.type === 'vnc'" class="menu-item" @click="doConnectVNC">{{ t('sidebar.connectVNC') }}</div>
@@ -350,7 +353,7 @@ import type { ConnectionConfig, ConnectionGroup } from '../types/session'
 defineProps<{
   visible: boolean
 }>()
-const emit = defineEmits(['connect', 'connectSftp', 'connectRdp', 'connectVnc', 'connectSpice', 'connectDB', 'connectMonitor', 'toggle'])
+const emit = defineEmits(['connect', 'connectSftp', 'connectFtp', 'connectRdp', 'connectVnc', 'connectSpice', 'connectDB', 'connectMonitor', 'toggle'])
 const connectionStore = useConnectionStore()
 const { t } = useI18n()
 const showForm = ref(false)
@@ -380,6 +383,7 @@ const TYPE_LABELS: Record<string, string> = {
   spice: 'SPICE',
   local: 'Local',
   sftp: 'SFTP',
+  ftp: 'FTP',
   monitor: 'Monitor',
   'database:mysql': 'MySQL',
   'database:postgres': 'PostgreSQL',
@@ -722,12 +726,6 @@ function getSelectedConnectionIds(): string[] {
 const menuVisible = ref(false)
 const menuStyle = ref({ left: '0px', top: '0px' })
 const selectedConn = ref<ConnectionConfig | null>(null)
-const connectLabel = computed(() => {
-  if (selectedConn.value?.type === 'telnet') return t('sidebar.connectTelnet')
-  if (selectedConn.value?.type === 'mosh') return t('sidebar.connectMosh')
-  if (selectedConn.value?.type === 'ssh') return t('sidebar.connectSSH')
-  return t('sidebar.connect')
-})
 const menuRef = ref<HTMLDivElement>()
 
 function clampMenuPosition(x: number, y: number): { left: string, top: string } {
@@ -781,6 +779,16 @@ function doConnectSFTP() {
   closeMenu()
   for (const c of conns) {
     emit('connectSftp', c)
+  }
+}
+
+function doConnectFTP() {
+  const ids = getSelectedConnectionIds()
+  const conns = ids.map(id => connectionStore.connections.find(c => c.id === id)).filter(Boolean) as ConnectionConfig[]
+  selectedIds.value = new Set()
+  closeMenu()
+  for (const c of conns) {
+    emit('connectFtp', c)
   }
 }
 
