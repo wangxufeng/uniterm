@@ -153,7 +153,7 @@ function onShellTriggerEnter() {
     const rect = el.getBoundingClientRect()
     shellSubmenuStyle.value = {
       position: 'fixed',
-      left: rect.right + 4 + 'px',
+      left: rect.right + 'px',
       top: rect.top + 'px',
     }
   })
