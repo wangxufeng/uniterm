@@ -52,7 +52,7 @@ import { Loader } from '@lucide/vue'
 import { useI18n } from '../i18n'
 import { usePanelStore } from '../stores/panelStore'
 import type { ConnectionConfig } from '../types/session'
-import { CreateSession, CloseSession } from '../../wailsjs/go/main/App'
+import { CreateSession, CloseSession, FrontendLog } from '../../wailsjs/go/main/App'
 import { EventsOn, ClipboardSetText, ClipboardGetText } from '../../wailsjs/runtime'
 
 const { t } = useI18n()
@@ -102,6 +102,7 @@ async function reconnect() {
 function initRFB(proxyAddr: string, password: string) {
   if (isIniting) return
   isIniting = true
+  FrontendLog('VNC', `initRFB proxyAddr=${proxyAddr}`)
 
   if (rfb) {
     try { rfb.disconnect() } catch (_) {}
@@ -148,16 +149,19 @@ function createRFB(RFB: any, proxyAddr: string, password: string) {
   rfb.scaleViewport = scaleViewport.value
 
   rfb.addEventListener('disconnect', (e: any) => {
+    FrontendLog('VNC', `disconnect clean=${e.detail.clean} reason=${e.detail.reason || ''}`)
     if (!e.detail.clean) {
       status.value = 'error'
     }
   })
 
   rfb.addEventListener('credentialsrequired', () => {
+    FrontendLog('VNC', 'credentialsrequired')
     status.value = 'error'
   })
 
-  rfb.addEventListener('securityfailure', () => {
+  rfb.addEventListener('securityfailure', (e: any) => {
+    FrontendLog('VNC', `securityfailure reason=${e.detail.reason || ''}`)
     status.value = 'error'
   })
 

@@ -462,7 +462,17 @@ func (a *App) CreateSession(sessionType string, config session.ConnectionConfig)
 			return nil, fmt.Errorf("tunnel SSH connection not found: %s", config.TunnelSSHConnID)
 		}
 
-		localPort, err := a.tunnelService.Start(s.ID(), *tunnelSSHConfig, config.Host, config.Port)
+		// Resolve actual target port. VNC/SPICE use libvirt display
+			// numbers (port < 100 means display :N → port 5900+N).
+			targetPort := config.Port
+			if sessionType == "vnc" || sessionType == "spice" {
+				if targetPort <= 0 {
+					targetPort = 5900
+				} else if targetPort < 100 {
+					targetPort += 5900
+				}
+			}
+			localPort, err := a.tunnelService.Start(s.ID(), *tunnelSSHConfig, config.Host, targetPort)
 		if err != nil {
 			_ = a.sessionManager.Close(s.ID())
 			return nil, fmt.Errorf("tunnel start: %w", err)
