@@ -18,12 +18,12 @@ import (
 
 type LocalSession struct {
 	baseSession
-	cpty     *conpty.ConPty
-	stdin    io.WriteCloser
-	stdout   io.Reader
-	cmd      *exec.Cmd
-	quit     chan struct{}
-	quitOnce sync.Once
+	cpty           *conpty.ConPty
+	stdin          io.WriteCloser
+	stdout         io.Reader
+	cmd            *exec.Cmd
+	quit           chan struct{}
+	disconnectOnce sync.Once
 }
 
 func NewLocalSession(id string) *LocalSession {
@@ -184,21 +184,24 @@ func (s *LocalSession) Write(data []byte) error {
 	return fmt.Errorf("not connected")
 }
 
+// Disconnect tears down the local session. It uses sync.Once so the entire
+// teardown sequence (including ConPTY Close / process Kill) executes exactly
+// once, regardless of how many goroutines call Disconnect concurrently.
 func (s *LocalSession) Disconnect() error {
-	s.quitOnce.Do(func() {
+	s.disconnectOnce.Do(func() {
 		close(s.quit)
+		if s.cpty != nil {
+			s.cpty.Close()
+			s.cpty = nil
+		}
+		if s.stdin != nil {
+			s.stdin.Close()
+		}
+		if s.cmd != nil && s.cmd.Process != nil {
+			s.cmd.Process.Kill()
+		}
+		s.setStatus(StatusDisconnected)
 	})
-	if s.cpty != nil {
-		s.cpty.Close()
-		s.cpty = nil
-	}
-	if s.stdin != nil {
-		s.stdin.Close()
-	}
-	if s.cmd != nil && s.cmd.Process != nil {
-		s.cmd.Process.Kill()
-	}
-	s.setStatus(StatusDisconnected)
 	return nil
 }
 
