@@ -580,7 +580,7 @@ onMounted(() => {
       if (history) {
         // Apply syntax highlighting when restoring history so it matches
         // newly arriving lines after a tab switch.
-        const hlOn = settingsStore.settings.terminal.highlightEnabled ?? true
+        const hlOn = (settingsStore.settings.terminal.highlightEnabled ?? true) && props.mode !== 'local'
         terminal.write(hlOn ? highlight(history) : history)
       }
       // Sync writtenChunks so onActivated replay only fills the gap.
@@ -674,6 +674,7 @@ onMounted(() => {
         }
 
         // Defer suggestion update/close so SessionWrite is not blocked
+        const wasVisible = suggestions.isVisible()
         setTimeout(() => {
           if (!terminalInput) return
           const smartOn = settingsStore.settings.terminal.smartCompletion ?? true
@@ -686,6 +687,10 @@ onMounted(() => {
             suggestions.close()
             return
           }
+          // Only show suggestions if they were already visible or if the
+          // input is a printable character (not arrow keys / navigation).
+          const isPrintable = data.length === 1 && data >= ' '
+          if (!wasVisible && !isPrintable) return
           if (terminalInput.isAtLineEnd() && terminalInput.currentToken.value && !terminalInput.isPasswordMode()) {
             suggestions.updateSuggestions(terminalInput.currentToken.value)
           } else {
@@ -824,11 +829,12 @@ onMounted(() => {
       return
     }
 
-    // Filter ED3 (erase scrollback). For ED2 (clear screen), replace with
-    // newline scrolling + home so that current viewport content is pushed
-    // into scrollback before clearing, matching standard terminal behavior.
+    // Filter ED3 (erase scrollback).
     let data = payload.data.replace(/\x1b\[3J/g, '')
-    if (data.includes('\x1b[2J')) {
+    // For ED2 (clear screen) in the main buffer, replace with scrolling
+    // to preserve scrollback history. In alternate screen (vim, less,
+    // k9s), pass through unchanged — the app manages its own screen.
+    if (data.includes('\x1b[2J') && terminal.buffer.active.type !== 'alternate') {
       const rows = terminal.rows
       const scrollClear = '\n'.repeat(rows) + '\x1b[H'
       data = data.replace(/\x1b\[H\x1b\[2J/g, scrollClear)
@@ -849,7 +855,7 @@ onMounted(() => {
           suggestions.close()
         }
       }
-      const hlOn = settingsStore.settings.terminal.highlightEnabled ?? true
+      const hlOn = (settingsStore.settings.terminal.highlightEnabled ?? true) && props.mode !== 'local'
       terminal.write(hlOn ? highlight(data) : data)
       writtenChunks++
       if (props.mode === 'ssh' && props.onSessionStatus) {
@@ -986,7 +992,7 @@ onActivated(() => {
     const total = sessionStore.getChunkCount(props.sessionId)
     if (total > writtenChunks) {
       const tail = sessionStore.getDataFromChunk(props.sessionId, writtenChunks)
-      const hlOn = settingsStore.settings.terminal.highlightEnabled ?? true
+      const hlOn = (settingsStore.settings.terminal.highlightEnabled ?? true) && props.mode !== 'local'
       terminal?.write(hlOn ? highlight(tail) : tail)
       writtenChunks = total
     }

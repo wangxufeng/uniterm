@@ -1,4 +1,6 @@
-const ANSI_RESET = '\x1b[0m'
+// Reset foreground only (39), not all SGR.
+// \x1b[0m would cancel vim's reverse video (\x1b[7m).
+const ANSI_RESET = '\x1b[39m'
 // Match ANSI escape sequences: CSI (ESC [ ... letter) and OSC (ESC ] ... BEL/ST)
 const ANSI_RE = /(\x1b\[[\x20-\x3F]*[\x40-\x7E]|\x1b[\]PX^_][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[\x20-\x2F][\x30-\x7E]|\x1b[\x30-\x7E])/g
 
@@ -24,19 +26,41 @@ function segmentText(text: string): { text: string; isCSI: boolean }[] {
   return segments
 }
 
-// Patterns ordered longest-first
-const PATTERNS: { regex: RegExp; sgr: string }[] = [
-  { regex: /https?:\/\/[^\s\x1b]+/gi, sgr: '\x1b[4;38;5;39m' },
-  { regex: /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?\b/g, sgr: '\x1b[38;5;82m' },
-  { regex: /(?:\/|~\/)[\w.\/-]+\.\w+\b/g, sgr: '\x1b[38;5;177m' },
-  { regex: /\b\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:[.,]\d+)?\b/g, sgr: '\x1b[38;5;39m' },
-  { regex: /\b\d{2}:\d{2}:\d{2}\b/g, sgr: '\x1b[38;5;39m' },
-  { regex: /"(?:[^"\\]|\\.){2,}"|'(?:[^'\\]|\\.){2,}'/g, sgr: '\x1b[38;5;215m' },
-  { regex: /\b(?:ERROR|FAIL(?:ED|URE)?|CRITICAL|FATAL)\b/g, sgr: '\x1b[38;5;203m' },
-  { regex: /\bWARN(?:ING)?\b/g, sgr: '\x1b[38;5;221m' },
-  { regex: /\b(?:INFO|SUCCESS|OK)\b/g, sgr: '\x1b[38;5;75m' },
-  { regex: /[{}()\[\]|*=<>]/g, sgr: '\x1b[38;5;147m' },
-  { regex: /\b\d+\b/g, sgr: '\x1b[38;5;145m' },
+// ── Color palette ──
+// 256-color SGR codes: \x1b[38;5;{n}m for foreground
+// Add '4;' prefix for underline, e.g. \x1b[4;38;5;{n}m
+const FG = (n: number) => `\x1b[38;5;${n}m`
+const UNDERLINE_FG = (n: number) => `\x1b[4;38;5;${n}m`
+const C = {
+  url:       UNDERLINE_FG(39),
+  ip:        FG(82),
+  path:      FG(177),
+  datetime:  FG(39),
+  string:    FG(215),
+  error:     FG(203),
+  warning:   FG(221),
+  info:      FG(75),
+  brace:     FG(223),
+  number:    FG(152),
+} as const
+
+// Patterns grouped by color type, ordered longest-first
+const PATTERNS: { sgr: string; regexes: RegExp[] }[] = [
+  { sgr: C.url,     regexes: [/https?:\/\/[^\s\x1b]+/gi] },
+  { sgr: C.ip,      regexes: [/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?\b/g] },
+  { sgr: C.path,    regexes: [/(?<=^|\s)(?:\/|~\/)[\w.\/-]+(?=[\s:;"')\]}]|$)/g] },
+  { sgr: C.datetime, regexes: [
+    /\b\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(?::\d{2})?(?:[.,]\d+)?Z?\b/g,
+    /\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\s+\d{4}\b/g,
+    /\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\b/g,
+    /\b\d{2}:\d{2}:\d{2}\b/g,
+  ]},
+  { sgr: C.string,  regexes: [/"(?:[^"\\]|\\.){2,}"|'(?:[^'\\]|\\.){2,}'/g] },
+  { sgr: C.error,   regexes: [/\b(?:ERROR|FAIL(?:ED|URE)?|CRITICAL|FATAL)\b/g] },
+  { sgr: C.warning, regexes: [/\bWARN(?:ING)?\b/g] },
+  { sgr: C.info,    regexes: [/\b(?:INFO|SUCCESS|OK)\b/g] },
+  { sgr: C.brace,   regexes: [/[{}()\[\]|*=<>]/g] },
+  { sgr: C.number,  regexes: [/\b\d+\b/g] },
 ]
 
 function highlightPlainText(text: string): string {
@@ -48,12 +72,15 @@ function highlightPlainText(text: string): string {
     } else {
       type MatchEntry = { start: number; end: number; sgr: string }
       const allMatches: MatchEntry[] = []
-      for (const { regex, sgr } of PATTERNS) {
-        regex.lastIndex = 0
-        let m: RegExpExecArray | null
-        while ((m = regex.exec(seg.text)) !== null) {
-          allMatches.push({ start: m.index, end: m.index + m[0].length, sgr })
-          if (allMatches.length > 200) break  // too many matches, skip
+      for (const { sgr, regexes } of PATTERNS) {
+        for (const regex of regexes) {
+          regex.lastIndex = 0
+          let m: RegExpExecArray | null
+          while ((m = regex.exec(seg.text)) !== null) {
+            allMatches.push({ start: m.index, end: m.index + m[0].length, sgr })
+            if (allMatches.length > 200) break
+          }
+          if (allMatches.length > 200) break
         }
         if (allMatches.length > 200) break
       }
@@ -81,15 +108,17 @@ function highlightPlainText(text: string): string {
 }
 
 export function highlight(text: string): string {
-  // Process line by line to avoid cross-line regex matches
+  // Process line by line to avoid cross-line regex matches.
   const lines = text.split(/(\r?\n)/)
   let result = ''
   for (const line of lines) {
     if (line === '\r\n' || line === '\n' || line === '\r') {
       result += line
     } else if (line) {
-      // Skip any line with ANSI escape codes — TUI/colored output must not be modified
-      if (line.indexOf('\x1b') !== -1) {
+      // Skip lines with display attributes (reverse video, bold,
+      // italic, etc. — \x1b[1-8]m). Our injected fg colors would
+      // become bg colors under \x1b[7m, washing out the selection.
+      if (/\x1b\[[1-8]m/.test(line)) {
         result += line
       } else {
         result += highlightPlainText(line)

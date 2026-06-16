@@ -42,7 +42,7 @@ export function getXtermTheme(name: string): any {
     blue: '#60a5fa',
     magenta: '#c084fc',
     cyan: '#22d3ee',
-    white: '#e8e8ec',
+    white: '#b0b0b8',
     brightBlack: '#3f3f46',
     brightRed: '#fca5a5',
     brightGreen: '#6ee7b7',
@@ -50,7 +50,7 @@ export function getXtermTheme(name: string): any {
     brightBlue: '#93c5fd',
     brightMagenta: '#d8b4fe',
     brightCyan: '#67e8f9',
-    brightWhite: '#fafafa'
+    brightWhite: '#d0d0d8'
   }
   switch (name) {
     case 'light':
