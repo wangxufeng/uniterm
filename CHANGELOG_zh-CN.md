@@ -1,5 +1,26 @@
 # 更新日志
 
+## v2026.06.16-alpha
+
+- **bugfix** 修复关闭本地终端 tab 导致程序崩溃。根因：多个 goroutine 并发调用 `ConPTY.Close()`，Windows 上 `ClosePseudoConsole` 被重复调用触发 OS 级访问违规，Go 的 `recover()` 无法捕获。修复：用 `sync.Once` 包裹完整 `Disconnect()` 体。
+- **bugfix** 修复切换 tab 后后台终端输出丢失。KeepAlive 停用期间数据被 sessionStore 缓存，但切回时从未回放。追踪已写入 chunk 数，`onActivated` 中补写缺失数据。
+- **bugfix** 修复后台 tab 中 SSH 断开后按 Enter 无法重连。`session:status` 事件被 `isActive` 守卫丢弃，`retryOnEnter` 从未设置。切回时从 `sessionStore.getStatus()` 同步。
+- **bugfix** 修复重连后智能提示框定位在左上角。`terminalInput` 持有已销毁终端引用，光标追踪返回 `{0,0}`。sessionId 变更时重建 `terminalInput`。
+- **bugfix** 修复重连后终端内容被清空。release + acquire 创建了全新 xterm.js 实例。改用 `transferTerminal()` 迁移终端条目到新 sessionId，保留 scrollback。
+- **bugfix** 修复 vim 中按 Ctrl+G / Shift+G / PageDown 出现渲染残留。`\x1b[2J` 替换为 scrollClear 在交替屏幕中也会执行，破坏 vim 的屏幕状态。现在仅主屏生效。
+- **bugfix** 修复 sidebar 分隔栏挡住连接列表滚动条。激活区域通过负 `right` 偏移移到 sidebar 外部。
+- **improve** 文本高亮全面优化：
+  - 高亮结束只用 `\x1b[39m` 重置前景色，不取消 vim 的反转视频
+  - 有显示属性（反转视频、加粗等）的行跳过，避免颜色混叠
+  - 文件路径正则匹配支持无扩展名文件和目录，用 `(^|\s)` 锚定避免词内误匹配
+  - 新增日期格式：`HH:MM`（无秒）、ISO 8601 `Z` 后缀、syslog `Mon DD HH:MM:SS`、`Wed Jan 21 HH:MM:SS YYYY`
+  - 颜色提取为命名常量；数字色 145→152，符号色 147→223，vim 反选下可辨
+  - 本地终端不启用文本高亮
+  - 智能提示框关闭时方向键不再触发弹出
+- **refactor** 合并 `WorkspaceTabItem` 到 `TabItem`，消除约 300 行重复代码。所有 tab 类型统一由单一组件处理。
+- **improve** Tab 关闭按钮替换为 Lucide `X` SVG 图标，调整尺寸和间距避免切 tab 时文字偏移。AI 锁按钮始终可见。本地终端隐藏 SFTP/监控菜单项。
+- **bugfix** 修复面板从 workspace 拖出后 AI 锁定状态被清除。
+
 ## v2026.06.14-alpha
 
 - **new** SSH 隧道（本地端口转发）。任何连接可选择已有 SSH 连接作为跳板，自动分配本地端口，通过隧道访问目标。VNC 自动处理 libvirt 端口偏移。

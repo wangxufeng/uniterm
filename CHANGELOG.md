@@ -1,5 +1,26 @@
 # Changelog
 
+## v2026.06.16-alpha
+
+- **bugfix** Fixed local terminal tab close causing entire app to crash. Root cause: multiple goroutines concurrently calling `ConPTY.Close()` → double `ClosePseudoConsole` on Windows triggers OS-level access violation unrecoverable by Go's `recover()`. Fix: wrap entire `Disconnect()` body in `sync.Once`.
+- **bugfix** Fixed terminal output loss when switching tabs. Data arriving during KeepAlive deactivation was buffered in sessionStore but never replayed on reactivation. Track written chunk count and replay missed chunks in `onActivated`.
+- **bugfix** Fixed Enter key not triggering reconnect after SSH disconnect occurred while tab was in background. `session:status` event was dropped by `isActive` guard, so `retryOnEnter` never got set. Sync from `sessionStore.getStatus()` on reactivation.
+- **bugfix** Fixed suggestion popup stuck at top-left after SSH reconnect. `terminalInput` held stale reference to disposed terminal, cursor tracking returned `{0,0}`. Recreate `terminalInput` when session ID changes.
+- **bugfix** Fixed terminal content being cleared after reconnect. Release + acquire created a new xterm.js instance. Use `transferTerminal()` to move the existing terminal entry to the new session ID, preserving scrollback.
+- **bugfix** Fixed pressing Ctrl+G / Shift+G / PageDown in vim leaving rendering residue. `\x1b[2J` replacement with scrollClear was also applied in alternate screen buffer, corrupting vim's screen state. Now only applies to main buffer.
+- **bugfix** Fixed sidebar resize handle blocking the connection list scrollbar. Moved activation area outside the sidebar edge via negative `right` offset.
+- **improve** Text highlighting overhaul:
+  - Highlight only resets foreground color (`\x1b[39m`) instead of all SGR (`\x1b[0m`), preserving vim's reverse video selection
+  - Lines with display attributes (reverse video, bold, etc.) skip highlighting to avoid color mixup
+  - File path regex now matches directories and files without extensions, anchored by `(^|\s)` to avoid false positives inside words
+  - Added datetime formats: `HH:MM` without seconds, ISO 8601 `Z` suffix, syslog `Mon DD HH:MM:SS`, weekday+year `Wed Jan 21 HH:MM:SS YYYY`
+  - Color palette extracted into named constants; number color 145→152, brace color 147→223 for better contrast on vim reverse video
+  - Local terminal sessions no longer apply text highlighting
+  - Suggestion popup no longer triggers on arrow key navigation when closed
+- **refactor** Merged `WorkspaceTabItem` into `TabItem`, eliminating ~300 lines of duplicate code. All tab types (terminal, workspace, SFTP, RDP, VNC, etc.) handled by a single component.
+- **improve** Tab close buttons replaced plain `×` text with Lucide `X` SVG icon, adjusted sizing and spacing to prevent text shift when switching tabs. AI lock button always visible. SFTP and Monitor context menu items hidden for local terminal panels.
+- **bugfix** Fixed AI lock state being cleared when panel detached from workspace tab.
+
 ## v2026.06.14-alpha
 
 - **new** SSH tunnel (local port forwarding). Any connection can use an existing SSH connection as a jump host. Auto-assigns local port, tunnels TCP through SSH. VNC ports automatically adjusted for libvirt display numbers.
