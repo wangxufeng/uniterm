@@ -2,12 +2,18 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
+import { ElDialog } from 'element-plus'
 import { WindowSetTitle } from '../wailsjs/runtime'
 import App from './App.vue'
 import './style.css'
 import { useSettingsStore } from './stores/settingsStore'
 
 WindowSetTitle('uniTerm')
+
+// Set ElDialog draggable by default
+if (ElDialog.props) {
+  ElDialog.props.draggable = { type: Boolean, default: true }
+}
 
 const app = createApp(App)
 const pinia = createPinia()

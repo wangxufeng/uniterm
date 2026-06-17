@@ -697,6 +697,7 @@ watch(() => aiStore.visible, () => {
   flex-direction: column;
   overflow: hidden;
   background: var(--bg-base);
+  padding: 3px;
 }
 
 .input-context-menu {

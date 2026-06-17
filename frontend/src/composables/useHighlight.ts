@@ -1,6 +1,6 @@
-// Reset foreground only (39), not all SGR.
-// \x1b[0m would cancel vim's reverse video (\x1b[7m).
-const ANSI_RESET = '\x1b[39m'
+// Full reset — lines with display attributes (reverse video, bold, etc.)
+// are skipped before highlighting, so \x1b[0m is safe here.
+const ANSI_RESET = '\x1b[0m'
 // Match ANSI escape sequences: CSI (ESC [ ... letter) and OSC (ESC ] ... BEL/ST)
 const ANSI_RE = /(\x1b\[[\x20-\x3F]*[\x40-\x7E]|\x1b[\]PX^_][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[\x20-\x2F][\x30-\x7E]|\x1b[\x30-\x7E])/g
 

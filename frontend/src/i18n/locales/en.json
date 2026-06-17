@@ -39,7 +39,6 @@
   "conn.keyPathPlaceholder": "e.g. ~/.ssh/id_rsa",
   "conn.cancel": "Cancel",
   "conn.saveConnect": "Save & Connect",
-  "conn.connect": "Connect",
   "conn.save": "Save",
   "conn.saveOnly": "Save Only",
   "conn.hostRequired": "Host is required",

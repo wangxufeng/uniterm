@@ -39,7 +39,6 @@
   "conn.keyPathPlaceholder": "例: ~/.ssh/id_rsa",
   "conn.cancel": "キャンセル",
   "conn.saveConnect": "保存して接続",
-  "conn.connect": "接続",
   "conn.save": "保存",
   "conn.saveOnly": "保存のみ",
   "conn.hostRequired": "ホストは必須です",

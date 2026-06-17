@@ -39,7 +39,6 @@
   "conn.keyPathPlaceholder": "例如 ~/.ssh/id_rsa",
   "conn.cancel": "取消",
   "conn.saveConnect": "儲存並連線",
-  "conn.connect": "連線",
   "conn.save": "儲存",
   "conn.saveOnly": "僅儲存",
   "conn.hostRequired": "主機位址不能為空",

@@ -9,7 +9,7 @@ import type { UpdateInfo } from '../types/settings'
 function showUpdateNotification(info: UpdateInfo) {
   const { t } = useI18n()
   ElMessage({
-    message: t('settings.foundNewVersion') + ': ' + info.latest + ' <a href="#" onclick="event.preventDefault();window.open(\'' + info.releaseUrl + '\',\'_blank\',\'location=no,toolbar=no,menubar=no,width=900,height=700\')" style="color:inherit;text-decoration:underline;">' + t('settings.openRelease') + '</a>',
+    message: t('settings.foundNewVersion') + ': ' + info.latest + ' <a href="#" onclick="event.preventDefault();window.runtime.BrowserOpenURL(\'' + info.releaseUrl + '\')" style="color:inherit;text-decoration:underline;">' + t('settings.openRelease') + '</a>',
     dangerouslyUseHTMLString: true,
     type: 'success',
     duration: 0,

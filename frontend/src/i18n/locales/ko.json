@@ -39,7 +39,6 @@
   "conn.keyPathPlaceholder": "예: ~/.ssh/id_rsa",
   "conn.cancel": "취소",
   "conn.saveConnect": "저장 후 연결",
-  "conn.connect": "연결",
   "conn.save": "저장",
   "conn.saveOnly": "저장만 하기",
   "conn.hostRequired": "호스트를 입력해 주세요",

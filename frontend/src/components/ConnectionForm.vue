@@ -148,7 +148,7 @@
     <template #footer>
       <el-button @click="visible = false">{{ t('conn.cancel') }}</el-button>
       <el-button @click="onSave">{{ t('conn.saveOnly') }}</el-button>
-      <el-button type="primary" @click="onConnect">{{ isEdit ? t('conn.saveConnect') : t('conn.connect') }}</el-button>
+      <el-button type="primary" @click="onConnect">{{ t('conn.saveConnect') }}</el-button>
     </template>
   </el-dialog>
 
