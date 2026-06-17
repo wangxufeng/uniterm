@@ -1,5 +1,16 @@
 # 更新日志
 
+## v2026.06.17-alpha
+
+- **bugfix** 修复终端中 URL 高亮后后续文字全部带下划线。高亮注入 `\x1b[4;38;5;39m`（下划线+颜色）但重置只用 `\x1b[39m` 仅恢复前景色，下划线属性泄漏。已有显示属性的行在高亮前已跳过，改用 `\x1b[0m` 完整重置安全可行。
+- **bugfix** 修复终端 canvas 贴边导致窗口边缘无法拖动调整大小。xterm.js canvas 占满客户区，鼠标难以定位到窄窄的非客户区边框。给 `.tab-area` 加 3px padding，终端内容与窗口边缘留出间距。
+- **improve** 对话框间距统一收紧：header `6px 12px`、body `8px 12px`、footer `6px 12px`，表单项间距 `10px`。表单标签设 `line-height: 1.3`、`height: auto` 覆盖 Element Plus 默认 `32px` 固定高度，换行时行高自动撑开不再互相覆盖。
+- **improve** 所有弹出框（el-dialog）全局启用拖动，通过 `main.ts` 修改 ElDialog 默认 props 实现，无需逐个组件添加属性。
+- **improve** 下拉框字体统一为 12px，补充新版 Element Plus select 组件的 placeholder/input/selected-item 类名覆盖。
+- **improve** 检测到更新包时点击链接改用 `BrowserOpenURL` 调用系统浏览器打开，不再弹出 WebView2 内置窗口。
+- **improve** 新建连接主按钮文案统一为"保存并连接"，与编辑模式一致。
+- **cleanup** 清理 9 个语言文件中不再使用的 `conn.connect` 翻译键。
+
 ## v2026.06.16-alpha
 
 - **bugfix** 修复关闭本地终端 tab 导致程序崩溃。根因：多个 goroutine 并发调用 `ConPTY.Close()`，Windows 上 `ClosePseudoConsole` 被重复调用触发 OS 级访问违规，Go 的 `recover()` 无法捕获。修复：用 `sync.Once` 包裹完整 `Disconnect()` 体。
