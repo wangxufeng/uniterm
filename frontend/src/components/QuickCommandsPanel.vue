@@ -8,6 +8,7 @@
         clearable
         size="small"
         class="qc-search-input"
+        @keydown="onListKeydown"
       />
       <button class="qc-icon-btn" @click="addGroup" :title="t('quickCommands.addGroup')">
         <FolderPlus :size="15" />
@@ -55,7 +56,7 @@
               <div v-if="cmd.name" class="qc-item-name">{{ cmd.name }}</div>
               <div class="qc-item-cmd" :class="{ 'qc-item-cmd-only': !cmd.name }">{{ cmd.command }}</div>
             </div>
-            <div v-if="selectedId === cmd.id || hoveredId === cmd.id" class="qc-item-actions">
+            <div class="qc-item-actions" :class="{ visible: selectedId === cmd.id || hoveredId === cmd.id }">
               <button class="qc-action-btn run" @click.stop="runCommand(cmd)" :title="t('quickCommands.run')">
                 <Play :size="14" />
               </button>
@@ -131,7 +132,7 @@
               <div v-if="cmd.name" class="qc-item-name">{{ cmd.name }}</div>
               <div class="qc-item-cmd" :class="{ 'qc-item-cmd-only': !cmd.name }">{{ cmd.command }}</div>
             </div>
-            <div v-if="selectedId === cmd.id || hoveredId === cmd.id" class="qc-item-actions">
+            <div class="qc-item-actions" :class="{ visible: selectedId === cmd.id || hoveredId === cmd.id }">
               <button class="qc-action-btn run" @click.stop="runCommand(cmd)" :title="t('quickCommands.run')">
                 <Play :size="14" />
               </button>
@@ -149,27 +150,28 @@
       </div>
     </div>
 
-    <!-- Right-click menu: Command -->
+    <!-- Context menu -->
     <div
-      v-show="cmdContextMenu.visible"
+      v-show="menuVisible"
       class="qc-context-menu"
-      :style="{ left: cmdContextMenu.x + 'px', top: cmdContextMenu.y + 'px' }"
+      :style="menuStyle"
       @click.stop
     >
-      <div class="menu-item" @click="editCommand(cmdContextMenu.cmd!)">{{ t('quickCommands.editCommand') }}</div>
-      <div class="menu-item danger" @click="deleteCommand(cmdContextMenu.cmd!)">{{ t('quickCommands.deleteCommand') }}</div>
-    </div>
+      <!-- Command menu items -->
+      <template v-if="selectedCmd">
+        <div class="menu-item" @click="runCommand(selectedCmd!); closeMenu()">{{ t('quickCommands.run') }}</div>
+        <div class="menu-item" @click="pasteCommand(selectedCmd!); closeMenu()">{{ t('quickCommands.paste') }}</div>
+        <div class="menu-divider" />
+        <div class="menu-item" @click="editCommand(selectedCmd!)">{{ t('quickCommands.editCommand') }}</div>
+        <div class="menu-item danger" @click="deleteCommand(selectedCmd!)">{{ t('quickCommands.deleteCommand') }}</div>
+      </template>
 
-    <!-- Right-click menu: Group -->
-    <div
-      v-show="groupContextMenu.visible"
-      class="qc-context-menu"
-      :style="{ left: groupContextMenu.x + 'px', top: groupContextMenu.y + 'px' }"
-      @click.stop
-    >
-      <div class="menu-item" @click="addCommand(groupContextMenu.group?.id)">{{ t('quickCommands.addCommand') }}</div>
-      <div class="menu-item" @click="renameGroup(groupContextMenu.group!)">{{ t('quickCommands.renameGroup') }}</div>
-      <div class="menu-item danger" @click="deleteGroupDialog(groupContextMenu.group!)">{{ t('quickCommands.deleteGroup') }}</div>
+      <!-- Group menu items -->
+      <template v-if="selectedGroup">
+        <div class="menu-item" @click="addCommand(selectedGroup!.id)">{{ t('quickCommands.addCommand') }}</div>
+        <div class="menu-item" @click="renameGroup(selectedGroup!)">{{ t('quickCommands.renameGroup') }}</div>
+        <div class="menu-item danger" @click="deleteGroupDialog(selectedGroup!)">{{ t('quickCommands.deleteGroup') }}</div>
+      </template>
     </div>
 
     <!-- Delete group dialog -->
@@ -240,8 +242,10 @@ const expandedGroups = ref<Set<string>>(new Set())
 
 const dragOverGroupId = ref<string | null>(null)
 
-const cmdContextMenu = ref<{ visible: boolean; x: number; y: number; cmd: QuickCommand | null }>({ visible: false, x: 0, y: 0, cmd: null })
-const groupContextMenu = ref<{ visible: boolean; x: number; y: number; group: QuickCommandGroup | null }>({ visible: false, x: 0, y: 0, group: null })
+const menuVisible = ref(false)
+const menuStyle = ref({ left: '0px', top: '0px' })
+const selectedCmd = ref<QuickCommand | null>(null)
+const selectedGroup = ref<QuickCommandGroup | null>(null)
 
 const deleteGroupDialogVisible = ref(false)
 const deletingGroup = ref<QuickCommandGroup | null>(null)
@@ -260,16 +264,25 @@ onMounted(async () => {
   await store.load()
   store.groups.forEach(g => expandedGroups.value.add(g.id))
   expandedGroups.value.add('__ungrouped__')
-  document.addEventListener('click', closeContextMenus)
+  document.addEventListener('click', closeMenu)
+  window.addEventListener('global:close-context-menus', closeMenu)
 })
 
 onUnmounted(() => {
-  document.removeEventListener('click', closeContextMenus)
+  document.removeEventListener('click', closeMenu)
+  window.removeEventListener('global:close-context-menus', closeMenu)
 })
 
-function closeContextMenus() {
-  cmdContextMenu.value.visible = false
-  groupContextMenu.value.visible = false
+function closeMenu() {
+  menuVisible.value = false
+}
+
+function clampMenuPosition(x: number, y: number) {
+  const menuWidth = 160
+  const menuHeight = 80
+  const mx = Math.min(x, window.innerWidth - menuWidth)
+  const my = Math.min(y, window.innerHeight - menuHeight)
+  return { left: mx + 'px', top: my + 'px' }
 }
 
 function toggleGroup(id: string) {
@@ -344,31 +357,48 @@ function selectCommand(id: string) {
   focusedId.value = id
 }
 
-function getActiveSessionId(): string | null {
+function getTargetSessionIds(): string[] {
   const activeTabId = tabStore.activeTabId
-  if (!activeTabId) return null
+  if (!activeTabId) return []
   const tab = tabStore.tabs.find(t => t.id === activeTabId)
-  if (!tab) return null
+  if (!tab) return []
+
+  // Broadcast mode: send to all SSH/local panels in the workspace
+  if (tab.type === 'workspace' && tabStore.isBroadcasting(tab.id)) {
+    const ids: string[] = []
+    for (const pid of tab.panelIds) {
+      const p = panelStore.getPanel(pid)
+      if (p?.sessionId && (p.type === 'ssh' || p.type === 'local')) {
+        ids.push(p.sessionId)
+      }
+    }
+    return ids
+  }
+
+  // Normal mode: send to active panel only
   const activePanelId = tab.type === 'workspace' ? tab.activePanelId : (tab.type === 'terminal' ? tab.panelId : null)
-  if (!activePanelId) return null
+  if (!activePanelId) return []
   const panel = panelStore.getPanel(activePanelId)
-  if (!panel?.sessionId) return null
-  return panel.sessionId
+  if (!panel?.sessionId) return []
+  return [panel.sessionId]
 }
 
 async function sendCommand(cmd: QuickCommand, mode: 'run' | 'paste') {
-  const sid = getActiveSessionId()
-  if (!sid) return
-  if (mode === 'paste') {
-    SessionWrite(sid, cmd.command)
-    return
-  }
-  let text = cmd.command
-  if (!text.endsWith('\n')) text += '\n'
-  const lines = text.split('\n').filter(l => l.length > 0)
-  for (let i = 0; i < lines.length; i++) {
-    SessionWrite(sid, lines[i] + '\n')
-    if (i < lines.length - 1) await new Promise(r => setTimeout(r, 100))
+  const sids = getTargetSessionIds()
+  if (sids.length === 0) return
+
+  for (const sid of sids) {
+    if (mode === 'paste') {
+      SessionWrite(sid, cmd.command)
+      continue
+    }
+    let text = cmd.command
+    if (!text.endsWith('\n')) text += '\n'
+    const lines = text.split('\n').filter(l => l.length > 0)
+    for (let i = 0; i < lines.length; i++) {
+      SessionWrite(sid, lines[i] + '\n')
+      if (i < lines.length - 1) await new Promise(r => setTimeout(r, 100))
+    }
   }
 }
 
@@ -376,10 +406,21 @@ function runCommand(cmd: QuickCommand) { sendCommand(cmd, 'run') }
 function pasteCommand(cmd: QuickCommand) { sendCommand(cmd, 'paste') }
 
 function onCommandContextMenu(e: MouseEvent, cmd: QuickCommand) {
-  cmdContextMenu.value = { visible: true, x: e.clientX, y: e.clientY, cmd }
+  e.stopPropagation()
+  window.dispatchEvent(new CustomEvent('global:close-context-menus'))
+  selectedCmd.value = cmd
+  selectedGroup.value = null
+  selectCommand(cmd.id)
+  menuStyle.value = clampMenuPosition(e.clientX, e.clientY)
+  menuVisible.value = true
 }
 function onGroupContextMenu(e: MouseEvent, group: QuickCommandGroup) {
-  groupContextMenu.value = { visible: true, x: e.clientX, y: e.clientY, group }
+  e.stopPropagation()
+  window.dispatchEvent(new CustomEvent('global:close-context-menus'))
+  selectedGroup.value = group
+  selectedCmd.value = null
+  menuStyle.value = clampMenuPosition(e.clientX, e.clientY)
+  menuVisible.value = true
 }
 
 function editCommand(cmd: QuickCommand) {
@@ -388,14 +429,14 @@ function editCommand(cmd: QuickCommand) {
   editingCmdCommand.value = cmd.command
   editingCmdGroupId.value = cmd.groupId
   editDialogVisible.value = true
-  cmdContextMenu.value.visible = false
+  closeMenu()
 }
 
 function deleteCommand(cmd: QuickCommand) {
   store.deleteCommand(cmd.id)
   if (selectedId.value === cmd.id) selectedId.value = null
   if (focusedId.value === cmd.id) focusedId.value = null
-  cmdContextMenu.value.visible = false
+  closeMenu()
 }
 
 function addCommand(groupId?: string) {
@@ -404,7 +445,7 @@ function addCommand(groupId?: string) {
   editingCmdCommand.value = ''
   editingCmdGroupId.value = groupId
   editDialogVisible.value = true
-  groupContextMenu.value.visible = false
+  closeMenu()
 }
 
 function addGroup() {
@@ -417,7 +458,7 @@ function renameGroup(group: QuickCommandGroup) {
   renamingGroup.value = group
   groupNameInput.value = group.name
   groupNameDialogVisible.value = true
-  groupContextMenu.value.visible = false
+  closeMenu()
 }
 
 function doSaveGroupName() {
@@ -431,7 +472,7 @@ function doSaveGroupName() {
 function deleteGroupDialog(group: QuickCommandGroup) {
   deletingGroup.value = group
   deleteGroupDialogVisible.value = true
-  groupContextMenu.value.visible = false
+  closeMenu()
 }
 
 function doDeleteGroup(deleteCommands: boolean) {
@@ -631,6 +672,14 @@ watch(searchQuery, (q) => {
   display: flex;
   gap: 2px;
   flex-shrink: 0;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.12s ease, visibility 0.12s ease;
+}
+
+.qc-item-actions.visible {
+  visibility: visible;
+  opacity: 1;
 }
 
 .qc-action-btn {
@@ -691,6 +740,12 @@ watch(searchQuery, (q) => {
 
 .qc-context-menu .menu-item.danger {
   color: var(--danger-color, #f56c6c);
+}
+
+.qc-context-menu .menu-divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 4px 6px;
 }
 
 .delete-group-actions {

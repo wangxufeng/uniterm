@@ -37,6 +37,14 @@ func EncryptConfigFiles(srcDir, destDir string, key []byte, kc *Keychain) error 
 		return fmt.Errorf("encrypt settings: %w", err)
 	}
 
+	if err := encryptGenericFile(
+		filepath.Join(srcDir, "quickCommands.json"),
+		filepath.Join(destDir, "quickCommands.json"),
+		key,
+	); err != nil {
+		return fmt.Errorf("encrypt quick commands: %w", err)
+	}
+
 	return nil
 }
 
@@ -137,6 +145,14 @@ func DecryptConfigFiles(srcDir, destDir string, key []byte, kc *Keychain) error 
 		return fmt.Errorf("decrypt settings: %w", err)
 	}
 
+	if err := decryptGenericFile(
+		filepath.Join(srcDir, "quickCommands.json"),
+		filepath.Join(destDir, "quickCommands.json"),
+		key,
+	); err != nil {
+		return fmt.Errorf("decrypt quick commands: %w", err)
+	}
+
 	return nil
 }
 
@@ -212,6 +228,35 @@ func decryptSettingsFile(src, dest string, key []byte, kc *Keychain) error {
 		}
 	}
 
+	return os.WriteFile(dest, plaintext, 0600)
+}
+
+// encryptGenericFile encrypts a config file that has no sensitive keychain-managed fields.
+func encryptGenericFile(src, dest string, key []byte) error {
+	data, err := readJSONFile(src)
+	if err != nil {
+		return err
+	}
+	encoded, err := encryptBytes(data, key)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(dest, []byte(encoded), 0600)
+}
+
+// decryptGenericFile decrypts a config file that has no sensitive keychain-managed fields.
+func decryptGenericFile(src, dest string, key []byte) error {
+	data, err := os.ReadFile(src)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return os.WriteFile(dest, []byte("{}"), 0600)
+		}
+		return err
+	}
+	plaintext, err := decryptBytes(string(data), key)
+	if err != nil {
+		return fmt.Errorf("decrypt: %w", err)
+	}
 	return os.WriteFile(dest, plaintext, 0600)
 }
 

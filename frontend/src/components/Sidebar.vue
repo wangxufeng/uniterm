@@ -7,15 +7,13 @@
   >
     <div class="resize-handle" @mousedown="onResizeStart" />
     <div class="sidebar-header">
-      <span class="header-label">{{ t('sidebar.title') }}</span>
-      <div class="header-actions">
-        <button class="icon-btn" @click="emit('toggle')" :title="t('sidebar.collapse')">
-          <el-icon><X :size="14" /></el-icon>
-        </button>
-      </div>
+      <button class="sidebar-tab" :class="{ active: activeView === 'connections' }" @click="activeView = 'connections'" :title="t('header.connections')"><el-icon><Network :size="16" /></el-icon></button>
+      <button class="sidebar-tab" :class="{ active: activeView === 'quickCommands' }" @click="activeView = 'quickCommands'" :title="t('quickCommands.quickCommandsTab')"><el-icon><Zap :size="16" /></el-icon></button>
+      <button class="icon-btn" @click="emit('toggle')" :title="t('sidebar.collapse')"><el-icon><X :size="14" /></el-icon></button>
     </div>
 
-    <div class="search-box">
+    <template v-if="activeView === 'connections'">
+      <div class="search-box">
       <el-input
         v-model="searchQuery"
         :placeholder="t('sidebar.searchPlaceholder')"
@@ -194,6 +192,9 @@
         {{ t('sidebar.noConnections') }}
       </div>
     </div>
+    </template>
+
+    <QuickCommandsPanel v-if="activeView === 'quickCommands'" />
 
     <ConnectionForm v-model="showForm" :edit-config="editConfig" :default-group-id="newConnGroupId" @save="onSave" @connect="onConnectFromForm" />
 
@@ -343,11 +344,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
-import { X, ChevronRight, ChevronDown, Filter, Check } from '@lucide/vue'
+import { X, ChevronRight, ChevronDown, Filter, Check, Network, Zap } from '@lucide/vue'
 import { ElMessageBox } from 'element-plus'
 import { useConnectionStore } from '../stores/connectionStore'
 import { useI18n } from '../i18n'
 import ConnectionForm from './ConnectionForm.vue'
+import QuickCommandsPanel from './QuickCommandsPanel.vue'
 import type { ConnectionConfig, ConnectionGroup } from '../types/session'
 
 defineProps<{
@@ -358,6 +360,7 @@ const connectionStore = useConnectionStore()
 const { t } = useI18n()
 const showForm = ref(false)
 const editConfig = ref<ConnectionConfig | undefined>(undefined)
+const activeView = ref<'connections' | 'quickCommands'>('connections')
 
 // Notify App.vue to hide native RDP window when edit dialog opens
 watch(showForm, (val) => {
@@ -1209,23 +1212,15 @@ onUnmounted(() => {
 .sidebar-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 2px;
   padding: 10px 14px;
   flex-shrink: 0;
 }
 
-.header-label {
-  font-family: var(--font-ui);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  color: var(--text-primary);
+.sidebar-header .icon-btn {
+  margin-left: auto;
 }
 
-.header-actions {
-  display: flex;
-  gap: 2px;
-}
 
 .icon-btn {
   display: flex;
@@ -1245,6 +1240,31 @@ onUnmounted(() => {
 .icon-btn:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
+}
+
+.sidebar-tab {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.sidebar-tab:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.sidebar-tab.active {
+  color: var(--accent-color);
+  background: var(--accent-subtle);
 }
 
 .search-box {

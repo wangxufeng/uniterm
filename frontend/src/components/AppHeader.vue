@@ -8,7 +8,7 @@
 
     <!-- Connections button (icon only, leftmost) -->
     <button class="header-btn" @click="emit('toggle-sidebar')" :title="t('header.connections')">
-      <el-icon><Network :size="14" /></el-icon>
+      <el-icon><PanelLeft :size="14" /></el-icon>
     </button>
 
     <!-- New connection dropdown (+ icon, after connections) -->
@@ -92,7 +92,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
-import { Plus, Network, Settings, ChevronRight } from '@lucide/vue'
+import { Plus, Network, Settings, ChevronRight, PanelLeft } from '@lucide/vue'
 import { useI18n } from '../i18n'
 import { useSettingsStore } from '../stores/settingsStore'
 import WindowControls from './WindowControls.vue'

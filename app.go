@@ -35,6 +35,7 @@ type App struct {
 	connectionStore      *store.ConnectionStore
 	aiSessionStore       *store.AISessionStore
 	settingsStore        *store.SettingsStore
+	quickCommandsStore   *store.QuickCommandsStore
 	terminalHistoryStore *store.TerminalHistoryStore
 	syncService          *sync.SyncService
 	tunnelService        *session.TunnelService
@@ -91,6 +92,7 @@ func (a *App) startup(ctx context.Context) {
 	configDir, _ := os.UserConfigDir()
 	appDir := filepath.Join(configDir, "uniTerm")
 	a.terminalHistoryStore = store.NewTerminalHistoryStore(appDir)
+	a.quickCommandsStore = store.NewQuickCommandsStore(appDir)
 
 	syncSvc, err := sync.NewSyncService()
 	if err != nil {
@@ -190,6 +192,11 @@ func (a *App) reloadStoresAfterSync() {
 	if a.settingsStore != nil {
 		if settings, err := a.settingsStore.Load(); err == nil {
 			runtime.EventsEmit(a.ctx, "store:settings:changed", settings)
+		}
+	}
+	if a.quickCommandsStore != nil {
+		if data, err := a.quickCommandsStore.Load(); err == nil {
+			runtime.EventsEmit(a.ctx, "store:quickCommands:changed", data)
 		}
 	}
 }
@@ -371,6 +378,26 @@ func (a *App) LoadSettings() (store.AppSettings, error) {
 		return store.AppSettings{}, fmt.Errorf("settings store not initialized")
 	}
 	return a.settingsStore.Load()
+}
+
+// QuickCommandsStore methods
+
+func (a *App) SaveQuickCommands(data store.QuickCommandData) error {
+	if a.quickCommandsStore == nil {
+		return fmt.Errorf("quick commands store not initialized")
+	}
+	err := a.quickCommandsStore.Save(data)
+	if err == nil {
+		a.triggerAutoSync()
+	}
+	return err
+}
+
+func (a *App) LoadQuickCommands() (store.QuickCommandData, error) {
+	if a.quickCommandsStore == nil {
+		return store.QuickCommandData{}, fmt.Errorf("quick commands store not initialized")
+	}
+	return a.quickCommandsStore.Load()
 }
 
 func (a *App) OpenFileDialog() (string, error) {

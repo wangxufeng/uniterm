@@ -428,7 +428,7 @@ func (s *SyncService) ConfigureRepo(repoURL, username, token, masterPassword str
 // getConfigModTime returns the latest modification time of config files in a directory.
 func getConfigModTime(dir string) time.Time {
 	var latest time.Time
-	for _, name := range []string{"connections.json", "settings.json"} {
+	for _, name := range []string{"connections.json", "settings.json", "quickCommands.json"} {
 		info, err := os.Stat(filepath.Join(dir, name))
 		if err != nil {
 			continue
@@ -460,7 +460,7 @@ func isConfigDirEmpty(dir string) bool {
 // localDir is the local config directory; remoteDir is the decrypted remote copy.
 // Passwords are backfilled from keychain on the local side before comparison.
 func compareConfigDirs(localDir, remoteDir string, kc *Keychain) (bool, error) {
-	for _, name := range []string{"connections.json", "settings.json"} {
+	for _, name := range []string{"connections.json", "settings.json", "quickCommands.json"} {
 		same, err := compareConfigFiles(filepath.Join(localDir, name), filepath.Join(remoteDir, name), kc)
 		if err != nil {
 			return false, err
@@ -695,7 +695,7 @@ func (s *SyncService) compareLocalWithRepo(encKey []byte) (bool, error) {
 
 // repoHasFiles returns true if the repo directory contains encrypted config files.
 func repoHasFiles(repoPath string) bool {
-	for _, name := range []string{"connections.json", "settings.json"} {
+	for _, name := range []string{"connections.json", "settings.json", "quickCommands.json"} {
 		if _, err := os.Stat(filepath.Join(repoPath, name)); os.IsNotExist(err) {
 			return false
 		}

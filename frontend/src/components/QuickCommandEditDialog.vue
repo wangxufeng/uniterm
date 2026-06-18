@@ -15,13 +15,15 @@
         />
       </el-form-item>
       <el-form-item :label="t('quickCommands.group')">
-        <el-select v-model="formGroupId" :placeholder="t('quickCommands.noGroup')" clearable>
+        <el-select v-model="formGroupId" :placeholder="t('quickCommands.noGroup')" clearable @change="onGroupSelect">
           <el-option
             v-for="g in store.groups"
             :key="g.id"
             :label="g.name"
             :value="g.id"
           />
+          <el-option :label="t('conn.noGroup')" value="" />
+          <el-option :label="t('conn.newGroup')" value="__new__" />
         </el-select>
       </el-form-item>
       <el-form-item :label="t('quickCommands.command')">
@@ -42,6 +44,19 @@
       <el-button type="primary" :disabled="!formCommand.trim()" @click="handleSave">
         {{ t('quickCommands.save') }}
       </el-button>
+    </template>
+  </el-dialog>
+
+  <!-- New group dialog -->
+  <el-dialog v-model="showNewGroupDialog" :title="t('conn.newGroupTitle')" width="360px" :close-on-click-modal="false">
+    <el-form @submit.prevent="confirmNewGroup">
+      <el-form-item :label="t('conn.groupName')">
+        <el-input v-model="newGroupName" :placeholder="t('conn.groupNamePlaceholder')" @keyup.enter="confirmNewGroup" />
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <el-button @click="showNewGroupDialog = false">{{ t('conn.cancel') }}</el-button>
+      <el-button type="primary" :disabled="!newGroupName.trim()" @click="confirmNewGroup">{{ t('conn.save') }}</el-button>
     </template>
   </el-dialog>
 </template>
@@ -98,6 +113,25 @@ function handleSave() {
   }
   visible.value = false
   resetForm()
+}
+
+const showNewGroupDialog = ref(false)
+const newGroupName = ref('')
+
+function onGroupSelect(value: string) {
+  if (value === '__new__') {
+    formGroupId.value = undefined
+    showNewGroupDialog.value = true
+  }
+}
+
+function confirmNewGroup() {
+  const name = newGroupName.value.trim()
+  if (!name) return
+  const group = store.addGroup(name)
+  formGroupId.value = group.id
+  showNewGroupDialog.value = false
+  newGroupName.value = ''
 }
 
 function resetForm() {
