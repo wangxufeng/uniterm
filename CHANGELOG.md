@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.0.0
+
+- **new** Quick Commands management. Sidebar panel with drag-drop groups, search filtering, keyboard navigation (arrow keys + Enter), edit dialog, and full 9-language i18n support.
+- **new** History Panel. New sidebar tab displaying all terminal command history with search and copy support.
+- **new** Quick command suggestions. Smart completion popup now includes matching quick command suggestions in real time.
+- **new** "Upload File (rz -be)" right-click menu option in SSH panels to trigger Zmodem upload.
+- **improve** New-connection button moved to sidebar top; quick command toolbar menu unified with sidebar styling.
+- **improve** Terminal command history is now always recorded regardless of the smart completion setting.
+- **bugfix** Fixed right-click paste in broadcast mode only applying to the current panel instead of all panels in the workspace.
+- **bugfix** Fixed double input after SSH reconnect via generation counter guard.
+- **bugfix** Fixed history panel tooltip, button layout, and text brightness issues.
+- **bugfix** Fixed session data replay on terminal reuse during panel merge/split.
+- **bugfix** Fixed text highlight clearing terminal background colors.
+- **bugfix** Fixed escape-sequence guard failing to skip TUI lines, causing highlight interference in vim/k9s.
+- **bugfix** Fixed SSH keepalive switching to global request to prevent auto-disconnect on some servers.
+
 ## v2026.06.17
 
 - **bugfix** Fixed URL highlight causing all subsequent text to be underlined in the terminal.
