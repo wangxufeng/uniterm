@@ -9,7 +9,7 @@
   "sidebar.collapse": "Свернуть",
   "sidebar.noConnections": "Подключений пока нет",
   "sidebar.noSearchResults": "Нет совпадений",
-  "sidebar.searchPlaceholder": "Поиск по имени или хосту...",
+  "sidebar.searchPlaceholder": "Поиск или быстрое подключение...",
   "sidebar.connect": "Подключиться",
   "sidebar.connectSSH": "Подключиться по SSH",
   "sidebar.connectSftp": "Подключиться по SFTP",

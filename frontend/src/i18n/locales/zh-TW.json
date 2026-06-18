@@ -9,7 +9,7 @@
   "sidebar.collapse": "收起",
   "sidebar.noConnections": "暫無連線",
   "sidebar.noSearchResults": "無匹配結果",
-  "sidebar.searchPlaceholder": "搜尋名稱或主機...",
+  "sidebar.searchPlaceholder": "搜尋或快捷連線...",
   "sidebar.connect": "連線",
   "sidebar.connectSSH": "連線 SSH",
   "sidebar.connectSftp": "連線 SFTP",

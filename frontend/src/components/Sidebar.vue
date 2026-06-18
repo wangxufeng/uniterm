@@ -7,60 +7,93 @@
   >
     <div class="resize-handle" @mousedown="onResizeStart" />
     <div class="sidebar-header">
-      <button class="sidebar-tab" :class="{ active: activeView === 'connections' }" @click="activeView = 'connections'" :title="t('header.connections')"><el-icon><Network :size="16" /></el-icon></button>
-      <button class="sidebar-tab" :class="{ active: activeView === 'quickCommands' }" @click="activeView = 'quickCommands'" :title="t('quickCommands.quickCommandsTab')"><el-icon><Zap :size="16" /></el-icon></button>
-      <button class="sidebar-tab" :class="{ active: activeView === 'history' }" @click="activeView = 'history'" :title="t('quickCommands.historyTab')"><el-icon><Clock :size="16" /></el-icon></button>
+      <button class="sidebar-tab" :class="{ active: activeView === 'connections' }" @click="activeView = 'connections'" :title="t('header.connections')"><el-icon><Network :size="14" /></el-icon></button>
+      <button class="sidebar-tab" :class="{ active: activeView === 'quickCommands' }" @click="activeView = 'quickCommands'" :title="t('quickCommands.quickCommandsTab')"><el-icon><Zap :size="14" /></el-icon></button>
+      <button class="sidebar-tab" :class="{ active: activeView === 'history' }" @click="activeView = 'history'" :title="t('quickCommands.historyTab')"><el-icon><Clock :size="14" /></el-icon></button>
       <button class="icon-btn" @click="emit('toggle')" :title="t('sidebar.collapse')"><el-icon><X :size="14" /></el-icon></button>
     </div>
 
     <template v-if="activeView === 'connections'">
       <div class="search-box">
-      <el-input
-        v-model="searchQuery"
-        :placeholder="t('sidebar.searchPlaceholder')"
-        clearable
-        @keydown="onListKeydown"
-      >
-        <template #suffix>
-          <el-dropdown trigger="click" placement="bottom-end" :teleported="false">
-            <span
-              class="filter-trigger"
-              :class="{ active: selectedTypeFilter !== 'all' }"
-              @click.stop
-            >
-              <el-icon><Filter :size="14" /></el-icon>
-            </span>
-            <template #dropdown>
-              <el-dropdown-menu class="type-filter-menu">
-                <el-dropdown-item
-                  :class="{ 'is-active': selectedTypeFilter === 'all' }"
-                  @click="selectedTypeFilter = 'all'"
-                >
-                  <span class="dropdown-item-content">
-                    <el-icon v-if="selectedTypeFilter === 'all'"><Check :size="14" /></el-icon>
-                    <span v-else class="check-placeholder"></span>
-                    <span>{{ t('sidebar.filterAll') }}</span>
-                  </span>
+        <el-input
+          v-model="searchQuery"
+          :placeholder="t('sidebar.searchPlaceholder')"
+          clearable
+          @keydown="onListKeydown"
+        >
+          <template #suffix>
+            <el-dropdown trigger="click" placement="bottom-end" :teleported="false">
+              <span class="filter-trigger" :class="{ active: selectedTypeFilter !== 'all' }" @click.stop>
+                <el-icon><Filter :size="14" /></el-icon>
+              </span>
+              <template #dropdown>
+                <el-dropdown-menu class="type-filter-menu">
+                  <el-dropdown-item
+                    :class="{ 'is-active': selectedTypeFilter === 'all' }"
+                    @click="selectedTypeFilter = 'all'"
+                  >
+                    <span class="dropdown-item-content">
+                      <el-icon v-if="selectedTypeFilter === 'all'"><Check :size="14" /></el-icon>
+                      <span v-else class="check-placeholder"></span>
+                      <span>{{ t('sidebar.filterAll') }}</span>
+                    </span>
+                  </el-dropdown-item>
+                  <el-dropdown-item divided v-if="availableTypes.length > 0" />
+                  <el-dropdown-item
+                    v-for="typeOpt in availableTypes"
+                    :key="typeOpt.value"
+                    :class="{ 'is-active': selectedTypeFilter === typeOpt.value }"
+                    @click="selectedTypeFilter = typeOpt.value"
+                  >
+                    <span class="dropdown-item-content">
+                      <el-icon v-if="selectedTypeFilter === typeOpt.value"><Check :size="14" /></el-icon>
+                      <span v-else class="check-placeholder"></span>
+                      <span>{{ typeOpt.label }}</span>
+                    </span>
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </template>
+        </el-input>
+        <el-dropdown trigger="click" placement="bottom-end" :teleported="false" popper-class="new-conn-popper" @command="onNewConnCommand" @visible-change="onNewConnVisibleChange">
+          <button class="sb-icon-btn" :title="t('header.newConnection')" @click.stop>
+            <Plus :size="15" />
+          </button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <div
+                v-if="settingsStore.availableShells.length > 0"
+                class="submenu-wrapper"
+                @mouseenter="showShellSubmenu = true"
+                @mouseleave="showShellSubmenu = false"
+              >
+                <el-dropdown-item class="submenu-trigger">
+                  {{ t('header.newLocalTerminal') }} <ChevronRight :size="12" />
                 </el-dropdown-item>
-                <el-dropdown-item divided v-if="availableTypes.length > 0" />
-                <el-dropdown-item
-                  v-for="typeOpt in availableTypes"
-                  :key="typeOpt.value"
-                  :class="{ 'is-active': selectedTypeFilter === typeOpt.value }"
-                  @click="selectedTypeFilter = typeOpt.value"
-                >
-                  <span class="dropdown-item-content">
-                    <el-icon v-if="selectedTypeFilter === typeOpt.value"><Check :size="14" /></el-icon>
-                    <span v-else class="check-placeholder"></span>
-                    <span>{{ typeOpt.label }}</span>
-                  </span>
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-        </template>
-      </el-input>
-    </div>
+              </div>
+              <el-dropdown-item command="new-connection">{{ t('header.newConnection') }}</el-dropdown-item>
+              <el-dropdown-item command="new-group">{{ t('conn.newGroupTitle') }}</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+      </div>
+      <Teleport to="body">
+        <div
+          v-show="showShellSubmenu"
+          class="shell-submenu"
+          :style="shellSubmenuStyle"
+          @mouseenter="showShellSubmenu = true"
+          @mouseleave="showShellSubmenu = false"
+        >
+          <div
+            v-for="sh in settingsStore.availableShells"
+            :key="sh"
+            class="shell-item"
+            @click="onShellSelect(sh)"
+          >{{ getShellLabel(sh) }}</div>
+        </div>
+      </Teleport>
 
     <div class="connection-list" tabindex="0" @keydown="onListKeydown" @contextmenu.prevent="onEmptyAreaContextMenu">
       <!-- Grouped connections -->
@@ -347,9 +380,10 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
-import { X, ChevronRight, ChevronDown, Filter, Check, Network, Zap, Clock } from '@lucide/vue'
+import { X, ChevronRight, ChevronDown, Filter, Check, Network, Zap, Clock, Plus } from '@lucide/vue'
 import { ElMessageBox } from 'element-plus'
 import { useConnectionStore } from '../stores/connectionStore'
+import { useSettingsStore } from '../stores/settingsStore'
 import { useI18n } from '../i18n'
 import ConnectionForm from './ConnectionForm.vue'
 import QuickCommandsPanel from './QuickCommandsPanel.vue'
@@ -359,8 +393,9 @@ import type { ConnectionConfig, ConnectionGroup } from '../types/session'
 defineProps<{
   visible: boolean
 }>()
-const emit = defineEmits(['connect', 'connectSftp', 'connectFtp', 'connectRdp', 'connectVnc', 'connectSpice', 'connectDB', 'connectMonitor', 'toggle'])
+const emit = defineEmits(['connect', 'connectSftp', 'connectFtp', 'connectRdp', 'connectVnc', 'connectSpice', 'connectDB', 'connectMonitor', 'toggle', 'new-local-terminal-with-shell'])
 const connectionStore = useConnectionStore()
+const settingsStore = useSettingsStore()
 const { t } = useI18n()
 const showForm = ref(false)
 const editConfig = ref<ConnectionConfig | undefined>(undefined)
@@ -1083,6 +1118,49 @@ async function confirmDeleteGroup(action: 'delete-connections' | 'move-out') {
   selectedGroup.value = null
 }
 
+// ── New-connection dropdown + shell submenu ──
+const showShellSubmenu = ref(false)
+const shellSubmenuStyle = ref({ left: '0px', top: '0px' })
+
+function onNewConnCommand(cmd: string) {
+  if (cmd === 'new-connection') {
+    showForm.value = true
+    editConfig.value = undefined
+    newConnGroupId.value = undefined
+  } else if (cmd === 'new-group') {
+    showNewGroupDialog.value = true
+  }
+}
+
+function onShellSelect(sh: string) {
+  showShellSubmenu.value = false
+  emit('new-local-terminal-with-shell', sh)
+}
+
+function getShellLabel(path: string): string {
+  const lower = path.toLowerCase()
+  if (lower.includes('pwsh')) return 'PowerShell'
+  if (lower.includes('powershell')) return 'Windows PowerShell'
+  if (lower.includes('bash')) return 'Git Bash'
+  if (lower.includes('cmd')) return 'Command Prompt'
+  return path.split(/[\\/]/).pop() || path
+}
+
+function onNewConnVisibleChange(visible: boolean) {
+  if (!visible) return
+  nextTick(() => {
+    // Position submenu flush against the right edge of the button, aligned with dropdown
+    const btn = document.querySelector('.sb-icon-btn')
+    if (btn) {
+      const rect = btn.getBoundingClientRect()
+      shellSubmenuStyle.value = {
+        left: rect.right + 'px',
+        top: (rect.bottom + 4) + 'px',
+      }
+    }
+  })
+}
+
 // ── Form handlers ──
 function openNewForm() {
   editConfig.value = undefined
@@ -1226,6 +1304,25 @@ onUnmounted(() => {
 }
 
 
+.sb-icon-btn {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.sb-icon-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
 .icon-btn {
   display: flex;
   align-items: center;
@@ -1247,8 +1344,8 @@ onUnmounted(() => {
 }
 
 .sidebar-tab {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1272,7 +1369,10 @@ onUnmounted(() => {
 }
 
 .search-box {
-  padding: 0 10px 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 10px 6px;
   flex-shrink: 0;
 }
 
@@ -1490,5 +1590,42 @@ onUnmounted(() => {
   width: 14px;
   height: 14px;
   flex-shrink: 0;
+}
+</style>
+
+<style>
+.submenu-wrapper {
+  position: relative;
+}
+.submenu-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.shell-submenu {
+  position: fixed;
+  z-index: 10001;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: var(--shadow-lg);
+  padding: 4px;
+  min-width: 140px;
+}
+.shell-item {
+  padding: 6px 10px;
+  font-size: 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+.shell-item:hover {
+  background: var(--bg-hover);
+}
+
+.new-conn-popper {
+  margin-top: -8px !important;
+  margin-left: 4px !important;
 }
 </style>

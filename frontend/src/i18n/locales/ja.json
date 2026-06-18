@@ -9,7 +9,7 @@
   "sidebar.collapse": "折りたたむ",
   "sidebar.noConnections": "接続がありません",
   "sidebar.noSearchResults": "一致する接続がありません",
-  "sidebar.searchPlaceholder": "名前またはホストを検索...",
+  "sidebar.searchPlaceholder": "検索またはクイック接続...",
   "sidebar.connect": "接続",
   "sidebar.connectSSH": "SSH で接続",
   "sidebar.connectSftp": "SFTP で接続",

@@ -10,12 +10,17 @@
         class="qc-search-input"
         @keydown="onListKeydown"
       />
-      <button class="qc-icon-btn" @click="addGroup" :title="t('quickCommands.addGroup')">
-        <FolderPlus :size="15" />
-      </button>
-      <button class="qc-icon-btn" @click="addCommand()" :title="t('quickCommands.addCommand')">
-        <Plus :size="15" />
-      </button>
+      <el-dropdown trigger="click" placement="bottom-end" :teleported="false">
+        <button class="qc-icon-btn" :title="t('quickCommands.addCommand')" @click.stop>
+          <Plus :size="15" />
+        </button>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item @click="addCommand()">{{ t('quickCommands.addCommand') }}</el-dropdown-item>
+            <el-dropdown-item @click="addGroup">{{ t('quickCommands.addGroup') }}</el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
     </div>
 
     <!-- Command list -->
@@ -218,7 +223,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import {
-  FolderPlus, Plus, Play, Clipboard,
+  Plus, Play, Clipboard,
   ChevronDown, ChevronRight
 } from '@lucide/vue'
 import { useQuickCommandStore, type QuickCommand, type QuickCommandGroup } from '../stores/quickCommandStore'

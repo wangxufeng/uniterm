@@ -1,8 +1,6 @@
 <template>
   <div class="app-container">
     <AppHeader
-      @new-connection="showConnectionForm = true"
-      @new-local-terminal-with-shell="createLocalTerminalWithShell"
       @toggle-ai="aiStore.toggle"
       @toggle-sidebar="sidebarVisible = !sidebarVisible"
       @open-settings="openSettings"
@@ -11,7 +9,7 @@
       @tab-dragstart="onTabDragStart"
     />
     <div class="main-content">
-      <Sidebar :visible="sidebarVisible" @toggle="sidebarVisible = !sidebarVisible" @connect="onConnect" @connect-sftp="onConnectSftp" @connect-ftp="onConnectFtp" @connect-rdp="onConnectRDP" @connect-vnc="onConnectVNC" @connect-spice="onConnectSPICE" @connect-d-b="onConnectDB" @connect-monitor="onConnectMonitor" />
+      <Sidebar :visible="sidebarVisible" @toggle="sidebarVisible = !sidebarVisible" @connect="onConnect" @connect-sftp="onConnectSftp" @connect-ftp="onConnectFtp" @connect-rdp="onConnectRDP" @connect-vnc="onConnectVNC" @connect-spice="onConnectSPICE" @connect-d-b="onConnectDB" @connect-monitor="onConnectMonitor" @new-local-terminal-with-shell="createLocalTerminalWithShell" />
       <div class="tab-area">
         <template v-if="activeTab">
           <KeepAlive>

@@ -9,7 +9,7 @@
   "sidebar.collapse": "접기",
   "sidebar.noConnections": "연결이 없습니다",
   "sidebar.noSearchResults": "검색 결과가 없습니다",
-  "sidebar.searchPlaceholder": "이름 또는 호스트 검색...",
+  "sidebar.searchPlaceholder": "검색 또는 빠른 연결...",
   "sidebar.connect": "연결",
   "sidebar.connectSSH": "SSH 연결",
   "sidebar.connectSftp": "SFTP 연결",

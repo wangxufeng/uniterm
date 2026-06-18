@@ -11,54 +11,6 @@
       <el-icon><PanelLeft :size="14" /></el-icon>
     </button>
 
-    <!-- New connection dropdown (+ icon, after connections) -->
-    <el-dropdown
-      v-if="settingsStore.availableShells.length > 0"
-      trigger="click"
-      @command="onNewCommand"
-      @visible-change="onShellDropdownVisibleChange"
-    >
-      <button class="header-btn" :title="t('header.newConnection')">
-        <el-icon><Plus :size="14" /></el-icon>
-      </button>
-      <template #dropdown>
-        <el-dropdown-menu>
-          <el-dropdown-item command="new-connection">{{ t('header.newConnection') }}</el-dropdown-item>
-          <div
-            v-if="settingsStore.availableShells.length > 0"
-            ref="submenuTriggerRef"
-            class="submenu-wrapper"
-            @mouseenter="onShellTriggerEnter"
-            @mouseleave="onShellTriggerLeave"
-          >
-            <el-dropdown-item class="submenu-trigger">
-              {{ t('header.newLocalTerminal') }} <el-icon class="submenu-arrow"><ChevronRight :size="12" /></el-icon>
-            </el-dropdown-item>
-          </div>
-          <Teleport to="body">
-            <div
-              v-show="showShellSubmenu"
-              class="shell-submenu"
-              :style="shellSubmenuStyle"
-              @mouseenter="showShellSubmenu = true"
-              @mouseleave="showShellSubmenu = false"
-            >
-              <div
-                v-for="sh in settingsStore.availableShells"
-                :key="sh"
-                class="shell-item"
-                @click="onShellSelect(sh)"
-              >
-                {{ getShellLabel(sh) }}
-              </div>
-            </div>
-          </Teleport>
-        </el-dropdown-menu>
-      </template>
-    </el-dropdown>
-    <button v-else class="header-btn" @click="emit('new-connection')" :title="t('header.newConnection')">
-      <el-icon><Plus :size="14" /></el-icon>
-    </button>
 
     <!-- Tabs list -->
     <div class="header-tabs" :class="{ 'tabs-centered': platform === 'darwin' }">
@@ -91,10 +43,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
-import { Plus, Network, Settings, ChevronRight, PanelLeft } from '@lucide/vue'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { Settings, PanelLeft } from '@lucide/vue'
 import { useI18n } from '../i18n'
-import { useSettingsStore } from '../stores/settingsStore'
 import WindowControls from './WindowControls.vue'
 import TabsList from './TabsList.vue'
 import {
@@ -106,11 +57,8 @@ import {
 } from '../../wailsjs/runtime'
 
 const { t } = useI18n()
-const settingsStore = useSettingsStore()
 
 const emit = defineEmits<{
-  'new-connection': []
-  'new-local-terminal-with-shell': [path: string]
   'toggle-ai': []
   'toggle-sidebar': []
   'open-settings': []
@@ -118,50 +66,6 @@ const emit = defineEmits<{
   'toggle-ai-lock': [panelId: string]
   'tab-dragstart': [e: DragEvent, tabId: string]
 }>()
-
-function onNewCommand(cmd: string) {
-  if (cmd === 'new-connection') {
-    emit('new-connection')
-  } else if (cmd.startsWith('shell:')) {
-    emit('new-local-terminal-with-shell', cmd.slice(6))
-  }
-}
-
-function onShellSelect(sh: string) {
-  showShellSubmenu.value = false
-  emit('new-local-terminal-with-shell', sh)
-}
-
-function getShellLabel(path: string): string {
-  const lower = path.toLowerCase()
-  if (lower.includes('pwsh')) return 'PowerShell'
-  if (lower.includes('powershell')) return 'Windows PowerShell'
-  if (lower.includes('bash')) return 'Git Bash'
-  if (lower.includes('cmd')) return 'Command Prompt'
-  return path.split(/[\\/]/).pop() || path
-}
-
-const showShellSubmenu = ref(false)
-const submenuTriggerRef = ref<HTMLElement | null>(null)
-const shellSubmenuStyle = ref<Record<string, string>>({})
-
-function onShellTriggerEnter() {
-  showShellSubmenu.value = true
-  nextTick(() => {
-    const el = submenuTriggerRef.value
-    if (!el) return
-    const rect = el.getBoundingClientRect()
-    shellSubmenuStyle.value = {
-      position: 'fixed',
-      left: rect.right + 'px',
-      top: rect.top + 'px',
-    }
-  })
-}
-
-function onShellTriggerLeave() {
-  showShellSubmenu.value = false
-}
 
 const platform = ref<'windows' | 'darwin' | 'linux'>('windows')
 const isMaximised = ref(false)
@@ -185,14 +89,6 @@ async function onMaximise() {
 
 function onClose() {
   Quit()
-}
-
-function onShellDropdownVisibleChange(visible: boolean) {
-  if (visible) {
-    window.dispatchEvent(new CustomEvent('rdp:overlay-push'))
-  } else {
-    window.dispatchEvent(new CustomEvent('rdp:overlay-pop'))
-  }
 }
 
 function onDblClick(e: MouseEvent) {
@@ -335,49 +231,4 @@ onUnmounted(() => {
   --wails-draggable: no-drag;
 }
 
-/* Allow submenu to overflow the dropdown menu */
-:deep(.el-dropdown-menu) {
-  overflow: visible !important;
-}
-:deep(.el-dropdown-menu__item) {
-  position: static;
-}
-:deep(.el-scrollbar),
-:deep(.el-scrollbar__wrap),
-:deep(.el-scrollbar__view) {
-  overflow: visible !important;
-  max-height: none !important;
-}
-
-.submenu-trigger {
-  justify-content: space-between;
-}
-.submenu-arrow {
-  margin-left: 16px;
-  font-size: 10px;
-  color: var(--text-muted);
-}
-
-.shell-submenu {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
-  padding: 4px;
-  min-width: 160px;
-  z-index: 10000;
-}
-
-.shell-item {
-  padding: 8px 16px;
-  font-size: 12px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  white-space: nowrap;
-}
-.shell-item:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-}
 </style>

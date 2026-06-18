@@ -9,7 +9,7 @@
   "sidebar.collapse": "Colapsar",
   "sidebar.noConnections": "Aún no hay conexiones",
   "sidebar.noSearchResults": "Sin coincidencias",
-  "sidebar.searchPlaceholder": "Buscar por nombre o host...",
+  "sidebar.searchPlaceholder": "Buscar o conexión rápida...",
   "sidebar.connect": "Conectar",
   "sidebar.connectSSH": "Conectar SSH",
   "sidebar.connectSftp": "Conectar SFTP",
