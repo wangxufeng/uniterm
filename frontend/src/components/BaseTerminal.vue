@@ -369,9 +369,22 @@ async function applySuggestion(item: ReturnType<typeof suggestions.getSelectedIt
     // Replace entire line with Ctrl+U. Using backspaces only works when the
     // replacement is exactly the currentToken; for multi-token input (e.g.
     // "git che" → "git checkout") backspaces leave the earlier text behind.
-    if (sid && currentLine) {
-      SessionWrite(sid, '\x15')
-      SessionWrite(sid, item.value)
+    if (currentLine) {
+      if (props.broadcastActive && props.workspaceId) {
+        const tab = tabStore.tabs.find(t => t.id === props.workspaceId)
+        if (tab && tab.type === 'workspace') {
+          for (const pid of tab.panelIds) {
+            const p = panelStore.getPanel(pid)
+            if (p?.sessionId && (p.type === 'ssh' || p.type === 'local')) {
+              SessionWrite(p.sessionId, '\x15')
+              SessionWrite(p.sessionId, item.value)
+            }
+          }
+        }
+      } else if (sid) {
+        SessionWrite(sid, '\x15')
+        SessionWrite(sid, item.value)
+      }
     }
     terminalInput.lineBuffer.value = item.value
     terminalInput.cursorIndex.value = item.value.length
@@ -584,7 +597,10 @@ onMounted(() => {
         const hlOn = (settingsStore.settings.terminal.highlightEnabled ?? true) && props.mode !== 'local'
         terminal.write(hlOn ? highlight(history) : history)
       }
-      // Sync writtenChunks so onActivated replay only fills the gap.
+    }
+    // Always sync writtenChunks to prevent onActivated from replaying
+    // all session data when the terminal was reused (isNewTerminal=false).
+    if (sid) {
       writtenChunks = sessionStore.getChunkCount(sid)
     }
     // Force initial resize with retries — needed because cell dimensions
