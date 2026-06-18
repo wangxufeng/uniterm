@@ -18,7 +18,7 @@
     </div>
 
     <!-- Command list -->
-    <div class="qc-list">
+    <div class="qc-list" ref="listRef" tabindex="0" @keydown="onListKeydown">
       <template v-for="group in store.groups" :key="group.id">
         <div
           class="qc-group-header"
@@ -37,8 +37,8 @@
           <div
             v-for="cmd in store.getCommandsByGroup(group.id).filter(matchesSearch)"
             :key="cmd.id"
-            class="qc-item"
-            :class="{ selected: selectedId === cmd.id }"
+            class="qc-item indented"
+            :class="{ active: selectedId === cmd.id }"
             @click="selectCommand(cmd.id)"
             @dblclick="runCommand(cmd)"
             @contextmenu.prevent="onCommandContextMenu($event, cmd)"
@@ -61,6 +61,34 @@
         </template>
       </template>
 
+      <!-- Flat ungrouped commands (only when no real groups exist) -->
+      <template v-if="store.groups.length === 0">
+        <div
+          v-for="cmd in store.getCommandsByGroup(undefined).filter(matchesSearch)"
+          :key="cmd.id"
+          class="qc-item"
+          :class="{ active: selectedId === cmd.id }"
+          @click="selectCommand(cmd.id)"
+          @dblclick="runCommand(cmd)"
+          @contextmenu.prevent="onCommandContextMenu($event, cmd)"
+          @mouseenter="hoveredId = cmd.id"
+          @mouseleave="hoveredId = null"
+        >
+          <div class="qc-item-content">
+            <div v-if="cmd.name" class="qc-item-name">{{ cmd.name }}</div>
+            <div class="qc-item-cmd" :class="{ 'qc-item-cmd-only': !cmd.name }">{{ cmd.command }}</div>
+          </div>
+          <div v-if="selectedId === cmd.id || hoveredId === cmd.id" class="qc-item-actions">
+            <button class="qc-action-btn run" @click.stop="runCommand(cmd)" :title="t('quickCommands.run')">
+              <Play :size="14" />
+            </button>
+            <button class="qc-action-btn paste" @click.stop="pasteCommand(cmd)" :title="t('quickCommands.paste')">
+              <Clipboard :size="14" />
+            </button>
+          </div>
+        </div>
+      </template>
+
       <!-- Virtual (No Group) group - only when real groups exist -->
       <template v-if="store.groups.length > 0 && store.getCommandsByGroup(undefined).filter(matchesSearch).length > 0">
         <div
@@ -77,8 +105,8 @@
           <div
             v-for="cmd in store.getCommandsByGroup(undefined).filter(matchesSearch)"
             :key="cmd.id"
-            class="qc-item"
-            :class="{ selected: selectedId === cmd.id }"
+            class="qc-item indented"
+            :class="{ active: selectedId === cmd.id }"
             @click="selectCommand(cmd.id)"
             @dblclick="runCommand(cmd)"
             @contextmenu.prevent="onCommandContextMenu($event, cmd)"
@@ -190,6 +218,8 @@ const tabStore = useTabStore()
 const panelStore = usePanelStore()
 
 const selectedId = ref<string | null>(null)
+const focusedId = ref<string | null>(null)
+const listRef = ref<HTMLDivElement | null>(null)
 const hoveredId = ref<string | null>(null)
 const searchQuery = ref('')
 const expandedGroups = ref<Set<string>>(new Set())
@@ -243,8 +273,63 @@ function matchesSearch(cmd: QuickCommand): boolean {
   return false
 }
 
+function getAllVisibleIds(): string[] {
+  const ids: string[] = []
+  for (const g of store.groups) {
+    if (expandedGroups.value.has(g.id)) {
+      for (const c of store.getCommandsByGroup(g.id).filter(matchesSearch)) {
+        ids.push(c.id)
+      }
+    }
+  }
+  // ungrouped
+  if (store.groups.length > 0) {
+    if (expandedGroups.value.has('__ungrouped__')) {
+      for (const c of store.getCommandsByGroup(undefined).filter(matchesSearch)) {
+        ids.push(c.id)
+      }
+    }
+  } else {
+    for (const c of store.getCommandsByGroup(undefined).filter(matchesSearch)) {
+      ids.push(c.id)
+    }
+  }
+  return ids
+}
+
+function onListKeydown(e: KeyboardEvent) {
+  const ids = getAllVisibleIds()
+  if (ids.length === 0) return
+  const idx = ids.indexOf(focusedId.value || '')
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault()
+    const nextIdx = idx >= 0 && idx < ids.length - 1 ? idx + 1 : 0
+    focusedId.value = ids[nextIdx]
+    selectedId.value = ids[nextIdx]
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault()
+    const prevIdx = idx > 0 ? idx - 1 : ids.length - 1
+    focusedId.value = ids[prevIdx]
+    selectedId.value = ids[prevIdx]
+  } else if (e.key === 'Enter') {
+    e.preventDefault()
+    if (focusedId.value) {
+      const cmd = store.commands.find(c => c.id === focusedId.value)
+      if (cmd) runCommand(cmd)
+    }
+  } else if (e.key === 'Delete') {
+    e.preventDefault()
+    if (focusedId.value) {
+      const cmd = store.commands.find(c => c.id === focusedId.value)
+      if (cmd) deleteCommand(cmd)
+    }
+  }
+}
+
 function selectCommand(id: string) {
   selectedId.value = id
+  focusedId.value = id
 }
 
 function getActiveSessionId(): string | null {
@@ -297,6 +382,7 @@ function editCommand(cmd: QuickCommand) {
 function deleteCommand(cmd: QuickCommand) {
   store.deleteCommand(cmd.id)
   if (selectedId.value === cmd.id) selectedId.value = null
+  if (focusedId.value === cmd.id) focusedId.value = null
   cmdContextMenu.value.visible = false
 }
 
@@ -429,7 +515,7 @@ function doDeleteGroup(deleteCommands: boolean) {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 10px 8px 26px;
+  padding: 8px 10px;
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all 0.12s ease;
@@ -437,12 +523,21 @@ function doDeleteGroup(deleteCommands: boolean) {
   user-select: none;
 }
 
+.qc-item.indented {
+  padding-left: 26px;
+}
+
 .qc-item:hover {
   background: var(--bg-hover);
 }
 
-.qc-item.selected {
-  background: var(--bg-active, rgba(34, 211, 238, 0.08));
+.qc-item.active {
+  background: var(--accent-subtle);
+  box-shadow: inset 0 0 0 1px var(--accent-dim);
+}
+
+.qc-item.active .qc-item-name {
+  color: var(--accent);
 }
 
 .qc-item-content {
