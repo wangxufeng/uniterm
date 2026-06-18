@@ -227,6 +227,7 @@ import { usePanelStore } from '../stores/panelStore'
 import { SessionWrite } from '../../wailsjs/go/main/App'
 import { useI18n } from '../i18n'
 import QuickCommandEditDialog from './QuickCommandEditDialog.vue'
+import { quickCommandCache } from '../composables/useSuggestions'
 
 const { t } = useI18n()
 const store = useQuickCommandStore()
@@ -260,13 +261,20 @@ const editingCmdName = ref<string | undefined>(undefined)
 const editingCmdCommand = ref('')
 const editingCmdGroupId = ref<string | undefined>(undefined)
 
+function syncQuickCommandCache() {
+  quickCommandCache.value = store.commands.map(c => ({ name: c.name, command: c.command, id: c.id }))
+}
+
 onMounted(async () => {
   await store.load()
+  syncQuickCommandCache()
   store.groups.forEach(g => expandedGroups.value.add(g.id))
   expandedGroups.value.add('__ungrouped__')
   document.addEventListener('click', closeMenu)
   window.addEventListener('global:close-context-menus', closeMenu)
 })
+
+watch(() => store.commands, syncQuickCommandCache, { deep: true })
 
 onUnmounted(() => {
   document.removeEventListener('click', closeMenu)

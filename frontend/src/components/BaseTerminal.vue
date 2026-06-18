@@ -97,7 +97,7 @@ import {
 } from '../services/terminalManager'
 import { getXtermTheme } from '../composables/useTerminal'
 import { useTerminalInput } from '../composables/useTerminalInput'
-import { useSuggestions } from '../composables/useSuggestions'
+import { useSuggestions, quickCommandCache } from '../composables/useSuggestions'
 import TerminalSuggestion from './TerminalSuggestion.vue'
 import { startZmodemService } from '../services/zmodemService'
 import { useZmodemStore } from '../stores/zmodemStore'
@@ -365,7 +365,7 @@ async function applySuggestion(item: ReturnType<typeof suggestions.getSelectedIt
   const currentToken = terminalInput.currentToken.value
   const sid = props.sessionId
 
-  if (item.type === 'ai-result' || item.type === 'history') {
+  if (item.type === 'ai-result' || item.type === 'history' || item.type === 'quick-command') {
     // Replace entire line with Ctrl+U. Using backspaces only works when the
     // replacement is exactly the currentToken; for multi-token input (e.g.
     // "git che" → "git checkout") backspaces leave the earlier text behind.

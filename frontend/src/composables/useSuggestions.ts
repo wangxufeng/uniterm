@@ -16,7 +16,7 @@ export interface HistoryEntry {
 }
 
 export interface SuggestionItem {
-  type: 'history' | 'ai-preview' | 'ai-result'
+  type: 'history' | 'quick-command' | 'ai-preview' | 'ai-result'
   label: string
   value: string
   icon?: string
@@ -37,6 +37,9 @@ const MAX_COMMAND_LENGTH = 200
 
 const historyCache = new Map<string, HistoryEntry>() // key = command
 let historyLoaded = false
+
+// Shared state for quick command data (set from outside to avoid circular deps)
+export const quickCommandCache = ref<{ name?: string; command: string; id: string }[]>([])
 
 export function useSuggestions() {
   const state = ref<SuggestionsState>({
@@ -245,6 +248,27 @@ export function useSuggestions() {
     return matches.slice(0, 10)
   }
 
+  function getQuickCommandSuggestions(prefix: string): SuggestionItem[] {
+    if (!prefix) return []
+    const lowerPrefix = prefix.toLowerCase()
+    const matches: SuggestionItem[] = []
+    for (const cmd of quickCommandCache.value) {
+      const text = cmd.name || cmd.command
+      const searchIn = cmd.command
+      // Match against name or command text
+      if (text.toLowerCase().includes(lowerPrefix) || searchIn.toLowerCase().startsWith(lowerPrefix)) {
+        matches.push({
+          type: 'quick-command',
+          label: cmd.name || cmd.command,
+          value: cmd.command,
+          description: '快捷命令',
+          id: cmd.id,
+        })
+      }
+    }
+    return matches.slice(0, 10)
+  }
+
   async function generateAISuggestion(currentInput: string): Promise<void> {
     if (!currentInput.trim() || state.value.loading) return
 
@@ -306,7 +330,8 @@ export function useSuggestions() {
     debounceTimer = setTimeout(async () => {
       if (state.value.loading || !token) return
       const historyItems = getHistorySuggestions(token)
-      const items: SuggestionItem[] = [...historyItems]
+      const quickCommandItems = getQuickCommandSuggestions(token)
+      const items: SuggestionItem[] = [...quickCommandItems, ...historyItems]
       items.push({
         type: 'ai-preview',
         label: 'AI 转写...',
