@@ -102,6 +102,16 @@ jobs:
           hdiutil create -volname uniTerm -srcfolder dmg_staging -ov -format UDZO ../../uniterm-darwin-universal-${VERSION}.dmg
           rm -rf dmg_staging
 
+      - name: Package Windows portable
+        if: matrix.platform == 'windows/amd64'
+        shell: bash
+        run: |
+          mkdir -p dist_tmp
+          cp build/bin/uniTerm.exe dist_tmp/
+          VERSION=${{ env.VERSION }}
+          (cd dist_tmp && zip "../uniterm-windows-amd64-portable-${VERSION}.zip" uniTerm.exe)
+          rm -rf dist_tmp
+
       - name: Rename NSIS installer (Windows)
         if: matrix.platform == 'windows/amd64'
         shell: bash
