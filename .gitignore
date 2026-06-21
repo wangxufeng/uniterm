@@ -32,6 +32,7 @@ Thumbs.db
 
 # Claude Code
 .claude/
+.superpowers/
 
 # Root package files (project uses frontend/ for Node.js)
 /package.json
