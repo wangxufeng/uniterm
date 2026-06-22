@@ -47,6 +47,7 @@ type App struct {
 	webviewDataPath      string
 	chatCancel           context.CancelFunc // active stream cancellation
 	chatCancelMu         stdsync.Mutex      // guards chatCancel
+	moveResizeCh         chan string        // defer EventsEmit from WndProc
 }
 
 func NewApp(webviewDataPath string) *App {
@@ -63,6 +64,14 @@ func (a *App) startup(ctx context.Context) {
 
 	a.sessionManager = session.NewSessionManager()
 	a.tunnelService = session.NewTunnelService()
+
+	// Defer EventsEmit from WndProc to avoid blocking the modal resize/move loop.
+	a.moveResizeCh = make(chan string, 10)
+	go func() {
+		for evt := range a.moveResizeCh {
+			runtime.EventsEmit(a.ctx, evt)
+		}
+	}()
 
 	// Discover main window HWND for RDP child window embedding
 	a.mainHwnd = a.findMainWindow()

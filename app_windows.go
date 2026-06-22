@@ -10,7 +10,6 @@ import (
 	"unicode/utf16"
 	"unsafe"
 
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"golang.org/x/sys/windows"
 )
 
@@ -148,6 +147,18 @@ func (a *App) findMainWindow() uintptr {
 	return result
 }
 
+// emitMoveResize sends a move/resize event to the frontend without blocking.
+// It must never be called from within the WndProc modal resize/move loop.
+func (a *App) emitMoveResize(event string) {
+	if a.moveResizeCh == nil {
+		return
+	}
+	select {
+	case a.moveResizeCh <- event:
+	default:
+	}
+}
+
 func (a *App) subclassMainWindow() {
 	if a.mainHwnd == 0 {
 		return
@@ -160,18 +171,18 @@ func (a *App) subclassMainWindow() {
 		switch msg {
 		case WM_ENTERSIZEMOVE:
 			a.inSizeMove = true
-			runtime.EventsEmit(a.ctx, "rdp:move-resize-start")
+			a.emitMoveResize("rdp:move-resize-start")
 		case WM_EXITSIZEMOVE:
 			a.inSizeMove = false
-			runtime.EventsEmit(a.ctx, "rdp:move-resize-end")
+			a.emitMoveResize("rdp:move-resize-end")
 		case WM_SYSCOMMAND:
 			switch wparam {
 			case SC_MAXIMIZE, SC_MINIMIZE, SC_RESTORE:
-				runtime.EventsEmit(a.ctx, "rdp:move-resize-start")
+				a.emitMoveResize("rdp:move-resize-start")
 			}
 		case WM_SIZE:
 			if !a.inSizeMove {
-				runtime.EventsEmit(a.ctx, "rdp:move-resize-end")
+				a.emitMoveResize("rdp:move-resize-end")
 			}
 		}
 		ret, _, _ := procCallWindowProcW.Call(a.originalWndProc, uintptr(hwnd), uintptr(msg), wparam, lparam)
