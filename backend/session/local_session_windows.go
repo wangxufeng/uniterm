@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 
 	"github.com/UserExistsError/conpty"
 )
@@ -78,6 +79,8 @@ func (s *LocalSession) Connect(config ConnectionConfig) error {
 			cmd.Env = os.Environ()
 		}
 	}
+
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 
 	// Try ConPTY first for a real pseudo-terminal experience.
 	if conpty.IsConPtyAvailable() {

@@ -3,11 +3,111 @@
 package main
 
 import (
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"syscall"
+	"unicode/utf16"
 	"unsafe"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"golang.org/x/sys/windows"
 )
+
+func (a *App) GetAvailableShells() []string {
+	var shells []string
+	var seen = make(map[string]bool)
+
+	add := func(path string) {
+		if path == "" {
+			return
+		}
+		abs, err := exec.LookPath(path)
+		if err != nil {
+			return
+		}
+		key := strings.ToLower(strings.ReplaceAll(abs, `\`, `/`))
+		if seen[key] {
+			return
+		}
+		seen[key] = true
+		shells = append(shells, abs)
+	}
+
+	hasShell := func(name string) bool {
+		for _, sh := range shells {
+			if strings.EqualFold(filepath.Base(sh), name) {
+				return true
+			}
+		}
+		return false
+	}
+
+	add("pwsh.exe")
+	add("powershell.exe")
+	add("cmd.exe")
+	for _, p := range []string{
+		`C:\Program Files\Git\bin\bash.exe`,
+		`C:\Program Files (x86)\Git\bin\bash.exe`,
+		`C:\ProgramData\chocolatey\bin\bash.exe`,
+	} {
+		add(p)
+	}
+	if !hasShell("bash.exe") {
+		add("bash.exe")
+	}
+	if distros, _ := listWSLDistros(); len(distros) > 0 {
+		for _, d := range distros {
+			shells = append(shells, "wsl://"+d)
+		}
+	}
+	return shells
+}
+
+func listWSLDistros() ([]string, error) {
+	cmd := exec.Command("wsl.exe", "-l", "-q")
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, nil
+	}
+	return parseWSLDistros(out), nil
+}
+
+func parseWSLDistros(raw []byte) []string {
+	if len(raw) == 0 {
+		return nil
+	}
+
+	content := string(raw)
+	if len(raw) >= 2 && raw[0] == 0xFF && raw[1] == 0xFE {
+		u16 := make([]uint16, 0, len(raw)/2)
+		for i := 2; i+1 < len(raw); i += 2 {
+			u16 = append(u16, uint16(raw[i])|uint16(raw[i+1])<<8)
+		}
+		content = string(utf16.Decode(u16))
+	}
+
+	var distros []string
+	seen := make(map[string]bool)
+	for _, line := range strings.Split(content, "\n") {
+		line = strings.TrimSpace(line)
+		line = strings.ReplaceAll(line, "\x00", "")
+		line = strings.TrimSpace(strings.TrimPrefix(line, "*"))
+		if line == "" {
+			continue
+		}
+		lower := strings.ToLower(line)
+		if strings.Contains(lower, "docker-desktop") {
+			continue
+		}
+		if !seen[line] {
+			seen[line] = true
+			distros = append(distros, line)
+		}
+	}
+	return distros
+}
 
 const (
 	GWLP_WNDPROC     = ^uintptr(3)

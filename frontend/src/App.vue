@@ -112,7 +112,6 @@ import { useTabStore } from './stores/tabStore'
 import { usePanelStore } from './stores/panelStore'
 import { useSessionStore } from './stores/sessionStore'
 import { useAIStore } from './stores/aiStore'
-import { useSettingsStore } from './stores/settingsStore'
 import { useQuickCommandStore } from './stores/quickCommandStore'
 import { useUpdateCheck } from './composables/useUpdateCheck'
 import { useI18n } from './i18n'
@@ -127,7 +126,6 @@ const activeTab = computed(() => tabStore.activeTab)
 const panelStore = usePanelStore()
 const sessionStore = useSessionStore()
 const aiStore = useAIStore()
-const settingsStore = useSettingsStore()
 const updateCheck = useUpdateCheck()
 const { t } = useI18n()
 // ── RDP position sync ──
@@ -282,7 +280,6 @@ function onWheel(e: WheelEvent) {
 onMounted(() => {
   connectionStore.load()
   aiStore.init()
-  settingsStore.init()
   updateCheck.initAutoCheck()
   // Pre-load quick commands so suggestions can read them immediately
   useQuickCommandStore().load()

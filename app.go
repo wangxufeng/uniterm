@@ -19,8 +19,6 @@ import (
 	"strings"
 	stdsync "sync"
 	"time"
-	"unicode/utf16"
-
 	"go.bug.st/serial"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -1345,127 +1343,6 @@ func (a *App) RemoveTempFile(path string) error {
 func (a *App) FrontendLog(tag string, message string) {
 	_ = log.Init()
 	log.Writef("[%s] %s", tag, message)
-}
-
-// listWSLDistros returns the names of installed WSL distributions.
-// On non-Windows platforms, or if WSL is not available, it returns an empty list.
-func listWSLDistros() ([]string, error) {
-	if goruntime.GOOS != "windows" {
-		return nil, nil
-	}
-	cmd := exec.Command("wsl.exe", "-l", "-q")
-	out, err := cmd.Output()
-	if err != nil {
-		// WSL may not be installed/enabled; treat as empty list.
-		return nil, nil
-	}
-	return parseWSLDistros(out), nil
-}
-
-func parseWSLDistros(raw []byte) []string {
-	if len(raw) == 0 {
-		return nil
-	}
-
-	// wsl.exe -l -q outputs UTF-16 LE with a BOM on many systems.
-	content := string(raw)
-	if len(raw) >= 2 && raw[0] == 0xFF && raw[1] == 0xFE {
-		utf16le := make([]uint16, 0, len(raw)/2)
-		for i := 2; i+1 < len(raw); i += 2 {
-			utf16le = append(utf16le, uint16(raw[i])|uint16(raw[i+1])<<8)
-		}
-		content = string(utf16.Decode(utf16le))
-	}
-
-	var distros []string
-	seen := make(map[string]bool)
-	for _, line := range strings.Split(content, "\n") {
-		line = strings.TrimSpace(line)
-		// Remove null bytes and default-marker asterisk.
-		line = strings.ReplaceAll(line, "\x00", "")
-		line = strings.TrimSpace(strings.TrimPrefix(line, "*"))
-		if line == "" {
-			continue
-		}
-		// Skip internal/docker distros that are not useful as shells.
-		lower := strings.ToLower(line)
-		if strings.Contains(lower, "docker-desktop") {
-			continue
-		}
-		if !seen[line] {
-			seen[line] = true
-			distros = append(distros, line)
-		}
-	}
-	return distros
-}
-
-// GetAvailableShells returns a list of shell executables found on the system.
-func (a *App) GetAvailableShells() []string {
-	var shells []string
-	var seen = make(map[string]bool)
-
-	add := func(path string) {
-		if path == "" {
-			return
-		}
-		abs, err := exec.LookPath(path)
-		if err != nil {
-			return
-		}
-		// Deduplicate by normalized path (lower case, forward slashes).
-		key := strings.ToLower(strings.ReplaceAll(abs, `\`, `/`))
-		if seen[key] {
-			return
-		}
-		seen[key] = true
-		shells = append(shells, abs)
-	}
-
-	// Check if a shell with the given base name is already in the list.
-	hasShell := func(name string) bool {
-		for _, sh := range shells {
-			if strings.EqualFold(filepath.Base(sh), name) {
-				return true
-			}
-		}
-		return false
-	}
-
-	switch goruntime.GOOS {
-	case "windows":
-		add("pwsh.exe")
-		add("powershell.exe")
-		add("cmd.exe")
-		// Prefer explicit Git for Windows paths over WSL bash to avoid
-		// WSL relay errors when no Linux distribution is installed.
-		// On Windows, LookPath("bash.exe") finds C:\Windows\System32\bash.exe
-		// (the WSL launcher) before Git Bash, which fails if WSL isn't set up.
-		for _, p := range []string{
-			`C:\Program Files\Git\bin\bash.exe`,
-			`C:\Program Files (x86)\Git\bin\bash.exe`,
-			`C:\ProgramData\chocolatey\bin\bash.exe`,
-		} {
-			add(p)
-		}
-		if !hasShell("bash.exe") {
-			add("bash.exe")
-		}
-		// Append installed WSL distributions as pseudo-shell paths.
-		if distros, _ := listWSLDistros(); len(distros) > 0 {
-			for _, d := range distros {
-				shells = append(shells, "wsl://"+d)
-			}
-		}
-	default:
-		add(os.Getenv("SHELL"))
-		add("bash")
-		add("zsh")
-		add("fish")
-		add("sh")
-	}
-
-	return shells
 }
 
 // GetDefaultShell returns the system's default shell path for local terminals.
