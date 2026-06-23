@@ -891,12 +891,25 @@ func (a *App) DeleteTerminalHistoryEntry(ids []string) error {
 // ChatCompletion streams the Anthropic API response via SSE, emitting Wails
 // events for each token while collecting the full message. It returns the
 // complete message JSON when the stream ends (backward-compatible).
-func (a *App) ChatCompletion(apiKey, baseURL, model string, requestJSON string, protocol string) (string, error) {
-	// Inject stream: true into the request body
+func (a *App) ChatCompletion(apiKey, baseURL, model string, requestJSON string, protocol string, userAgent string) (string, error) {
+	// Parse the incoming request body (always Anthropic format from frontend)
 	var reqBody map[string]interface{}
 	if err := json.Unmarshal([]byte(requestJSON), &reqBody); err != nil {
 		return "", fmt.Errorf("invalid request JSON: %w", err)
 	}
+
+	if userAgent == "" {
+		userAgent = "uniTerm"
+	}
+
+	if protocol == "openai" {
+		return a.chatCompletionOpenAI(apiKey, baseURL, model, reqBody, userAgent)
+	}
+	return a.chatCompletionAnthropic(apiKey, baseURL, model, reqBody, userAgent)
+}
+
+// chatCompletionAnthropic handles the native Anthropic Messages API with SSE streaming.
+func (a *App) chatCompletionAnthropic(apiKey, baseURL, model string, reqBody map[string]interface{}, userAgent string) (string, error) {
 	reqBody["stream"] = true
 
 	modifiedJSON, err := json.Marshal(reqBody)
@@ -909,7 +922,6 @@ func (a *App) ChatCompletion(apiKey, baseURL, model string, requestJSON string, 
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	// Store cancel for frontend stop
 	a.chatCancelMu.Lock()
 	a.chatCancel = cancel
 	a.chatCancelMu.Unlock()
@@ -927,9 +939,9 @@ func (a *App) ChatCompletion(apiKey, baseURL, model string, requestJSON string, 
 	req.Header.Set("x-api-key", apiKey)
 	req.Header.Set("anthropic-version", "2023-06-01")
 	req.Header.Set("anthropic-beta", "prompt-caching-2024-07-31")
-	req.Header.Set("User-Agent", "uniTerm")
+	req.Header.Set("User-Agent", userAgent)
 
-	client := &http.Client{Timeout: 0} // no timeout; context handles it
+	client := &http.Client{Timeout: 0}
 	res, err := client.Do(req)
 	if err != nil {
 		return "", err
@@ -941,7 +953,6 @@ func (a *App) ChatCompletion(apiKey, baseURL, model string, requestJSON string, 
 		return "", fmt.Errorf("HTTP %d: %s", res.StatusCode, string(body))
 	}
 
-	// Accumulated state from SSE events
 	var contentBlocks []map[string]interface{}
 	var currentBlock map[string]interface{}
 	var messageRole string
@@ -949,7 +960,7 @@ func (a *App) ChatCompletion(apiKey, baseURL, model string, requestJSON string, 
 	currentBlockIndex := -1
 
 	scanner := bufio.NewScanner(res.Body)
-	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024) // 1MB max line
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -987,7 +998,6 @@ func (a *App) ChatCompletion(apiKey, baseURL, model string, requestJSON string, 
 
 			if deltaType == "text_delta" {
 				text, _ := delta["text"].(string)
-				// Accumulate text into the current block for the final response
 				if currentBlock != nil {
 					if currentBlock["text"] == nil {
 						currentBlock["text"] = ""
@@ -1001,7 +1011,6 @@ func (a *App) ChatCompletion(apiKey, baseURL, model string, requestJSON string, 
 			}
 			if deltaType == "input_json_delta" && currentBlock != nil {
 				partial, _ := delta["partial_json"].(string)
-				// content_block_start sets input to {} for tool_use; reset to ""
 				if currentBlock["input"] == nil || fmt.Sprintf("%T", currentBlock["input"]) != "string" {
 					currentBlock["input"] = ""
 				}
@@ -1063,7 +1072,6 @@ func (a *App) ChatCompletion(apiKey, baseURL, model string, requestJSON string, 
 		return "", err
 	}
 
-	// Stream ended without message_stop — return what we have
 	if len(contentBlocks) > 0 {
 		fullMessage := map[string]interface{}{
 			"role":    messageRole,
@@ -1074,6 +1082,406 @@ func (a *App) ChatCompletion(apiKey, baseURL, model string, requestJSON string, 
 	}
 
 	return "", fmt.Errorf("stream ended without message_stop")
+}
+
+// anthropicToolToOpenAI converts an Anthropic tool definition to OpenAI format.
+func anthropicToolToOpenAI(t map[string]interface{}) map[string]interface{} {
+	return map[string]interface{}{
+		"type": "function",
+		"function": map[string]interface{}{
+			"name":        t["name"],
+			"description": t["description"],
+			"parameters":  t["input_schema"],
+		},
+	}
+}
+
+// convertAnthropicMessageToOpenAI converts one Anthropic-format message to OpenAI format.
+func convertAnthropicMessageToOpenAI(msg map[string]interface{}) []map[string]interface{} {
+	role, _ := msg["role"].(string)
+	content := msg["content"]
+
+	var results []map[string]interface{}
+
+	switch role {
+	case "user":
+		out := map[string]interface{}{"role": "user"}
+		if contentStr, ok := content.(string); ok {
+			out["content"] = contentStr
+		} else if contentBlocks, ok := content.([]interface{}); ok {
+			for _, block := range contentBlocks {
+				if b, ok := block.(map[string]interface{}); ok {
+					if bType, _ := b["type"].(string); bType == "text" {
+						out["content"] = b["text"]
+					}
+					if bType, _ := b["type"].(string); bType == "tool_result" {
+						toolMsg := map[string]interface{}{
+							"role":         "tool",
+							"tool_call_id": b["tool_use_id"],
+							"content":      toString(b["content"]),
+						}
+						results = append(results, toolMsg)
+					}
+				}
+			}
+		}
+		if _, hasContent := out["content"]; hasContent {
+			results = append([]map[string]interface{}{out}, results...)
+		}
+
+	case "assistant":
+		out := map[string]interface{}{"role": "assistant"}
+		var toolCalls []map[string]interface{}
+		if contentStr, ok := content.(string); ok {
+			out["content"] = contentStr
+		} else if contentBlocks, ok := content.([]interface{}); ok {
+			for _, block := range contentBlocks {
+				if b, ok := block.(map[string]interface{}); ok {
+					if bType, _ := b["type"].(string); bType == "text" {
+						out["content"] = b["text"]
+					}
+					if bType, _ := b["type"].(string); bType == "tool_use" {
+						argsStr := "{}"
+						if input, ok := b["input"]; ok {
+							argsBytes, _ := json.Marshal(input)
+							argsStr = string(argsBytes)
+						}
+						toolCalls = append(toolCalls, map[string]interface{}{
+							"id":   b["id"],
+							"type": "function",
+							"function": map[string]interface{}{
+								"name":      b["name"],
+								"arguments": argsStr,
+							},
+						})
+					}
+				}
+			}
+		}
+		if len(toolCalls) > 0 {
+			out["tool_calls"] = toolCalls
+		}
+		results = append([]map[string]interface{}{out}, results...)
+
+	default:
+		out := map[string]interface{}{"role": role}
+		if contentStr, ok := content.(string); ok {
+			out["content"] = contentStr
+		}
+		results = append([]map[string]interface{}{out}, results...)
+	}
+
+	return results
+}
+
+func toString(v interface{}) string {
+	switch val := v.(type) {
+	case string:
+		return val
+	default:
+		b, _ := json.Marshal(v)
+		return string(b)
+	}
+}
+
+// chatCompletionOpenAI converts the Anthropic-format request to OpenAI,
+// calls the OpenAI Chat Completions API with SSE streaming, and converts
+// the response back to Anthropic format so the frontend sees no difference.
+func (a *App) chatCompletionOpenAI(apiKey, baseURL, model string, reqBody map[string]interface{}, userAgent string) (string, error) {
+	url := strings.TrimRight(baseURL, "/") + "/chat/completions"
+
+	// --- Build OpenAI-format request body ---
+	openaiBody := map[string]interface{}{
+		"model":       model,
+		"stream":      true,
+		"max_tokens":  reqBody["max_tokens"],
+	}
+
+	// Convert tools
+	if tools, ok := reqBody["tools"].([]interface{}); ok {
+		var oaiTools []map[string]interface{}
+		for _, t := range tools {
+			if tm, ok := t.(map[string]interface{}); ok {
+				oaiTools = append(oaiTools, anthropicToolToOpenAI(tm))
+			}
+		}
+		if len(oaiTools) > 0 {
+			openaiBody["tools"] = oaiTools
+		}
+	}
+
+	// Convert messages + system
+	var oaiMessages []map[string]interface{}
+	if system, ok := reqBody["system"].(string); ok && system != "" {
+		oaiMessages = append(oaiMessages, map[string]interface{}{
+			"role":    "system",
+			"content": system,
+		})
+	}
+	if msgs, ok := reqBody["messages"].([]interface{}); ok {
+		for _, m := range msgs {
+			if mm, ok := m.(map[string]interface{}); ok {
+				converted := convertAnthropicMessageToOpenAI(mm)
+				oaiMessages = append(oaiMessages, converted...)
+			}
+		}
+	}
+	openaiBody["messages"] = oaiMessages
+
+	requestJSON, err := json.Marshal(openaiBody)
+	if err != nil {
+		return "", fmt.Errorf("marshal openai request: %w", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+
+	a.chatCancelMu.Lock()
+	a.chatCancel = cancel
+	a.chatCancelMu.Unlock()
+	defer func() {
+		a.chatCancelMu.Lock()
+		a.chatCancel = nil
+		a.chatCancelMu.Unlock()
+	}()
+
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(requestJSON))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("User-Agent", userAgent)
+
+	client := &http.Client{Timeout: 0}
+	res, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(res.Body)
+		return "", fmt.Errorf("HTTP %d: %s", res.StatusCode, string(body))
+	}
+
+	// --- Parse OpenAI SSE stream, emit Anthropic-format events ---
+	var contentBlocks []map[string]interface{}
+	var currentBlock map[string]interface{}
+	var messageRole = "assistant"
+	currentBlockIndex := -1
+	activeToolCalls := make(map[int]map[string]interface{}) // index -> accumulating tool_call
+
+	scanner := bufio.NewScanner(res.Body)
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+
+	// Emit message_start at the beginning
+	runtime.EventsEmit(a.ctx, "ai:message_start", map[string]interface{}{
+		"message": map[string]interface{}{"role": "assistant"},
+	})
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if !strings.HasPrefix(line, "data: ") {
+			continue
+		}
+		dataStr := line[6:]
+
+		if strings.TrimSpace(dataStr) == "[DONE]" {
+			// Emit content_block_stop for any open block
+			if currentBlock != nil {
+				contentBlocks = append(contentBlocks, currentBlock)
+				runtime.EventsEmit(a.ctx, "ai:content_block_stop", map[string]interface{}{
+					"index": currentBlockIndex,
+				})
+				currentBlock = nil
+			}
+			// Close any open tool_use blocks
+			for idx, tc := range activeToolCalls {
+				contentBlocks = append(contentBlocks, tc)
+				runtime.EventsEmit(a.ctx, "ai:content_block_stop", map[string]interface{}{
+					"index": idx,
+				})
+			}
+			activeToolCalls = make(map[int]map[string]interface{})
+
+			// Emit message_delta and message_stop
+			runtime.EventsEmit(a.ctx, "ai:done", map[string]interface{}{
+				"message": map[string]interface{}{
+					"role":    messageRole,
+					"content": contentBlocks,
+				},
+				"stop_reason": "end_turn",
+			})
+
+			fullMessage := map[string]interface{}{
+				"role":    messageRole,
+				"content": contentBlocks,
+			}
+			resultJSON, _ := json.Marshal(fullMessage)
+			return string(resultJSON), nil
+		}
+
+		var event map[string]interface{}
+		if err := json.Unmarshal([]byte(dataStr), &event); err != nil {
+			continue
+		}
+
+		choices, _ := event["choices"].([]interface{})
+		if len(choices) == 0 {
+			continue
+		}
+		choice, _ := choices[0].(map[string]interface{})
+		delta, _ := choice["delta"].(map[string]interface{})
+		if delta == nil {
+			continue
+		}
+
+		// Handle text content
+		if textDelta, ok := delta["content"].(string); ok && textDelta != "" {
+			if currentBlock == nil || currentBlock["type"] != "text" {
+				// Close previous block if any
+				if currentBlock != nil {
+					contentBlocks = append(contentBlocks, currentBlock)
+					runtime.EventsEmit(a.ctx, "ai:content_block_stop", map[string]interface{}{
+						"index": currentBlockIndex,
+					})
+				}
+				currentBlockIndex++
+				currentBlock = map[string]interface{}{
+					"type": "text",
+					"text": "",
+				}
+				runtime.EventsEmit(a.ctx, "ai:block_start", map[string]interface{}{
+					"index":         currentBlockIndex,
+					"content_block": currentBlock,
+				})
+			}
+			currentBlock["text"] = currentBlock["text"].(string) + textDelta
+			runtime.EventsEmit(a.ctx, "ai:token", map[string]interface{}{
+				"text":  textDelta,
+				"index": currentBlockIndex,
+			})
+		}
+
+		// Handle tool_calls in delta
+		if toolCalls, ok := delta["tool_calls"].([]interface{}); ok {
+			for _, tc := range toolCalls {
+				tcMap, _ := tc.(map[string]interface{})
+				idxF, _ := tcMap["index"].(float64)
+				idx := int(idxF)
+
+				if _, exists := activeToolCalls[idx]; !exists {
+					// Close current text block if open
+					if currentBlock != nil {
+						contentBlocks = append(contentBlocks, currentBlock)
+						runtime.EventsEmit(a.ctx, "ai:content_block_stop", map[string]interface{}{
+							"index": currentBlockIndex,
+						})
+						currentBlock = nil
+					}
+					currentBlockIndex++
+					activeToolCalls[idx] = map[string]interface{}{
+						"type":  "tool_use",
+						"id":    tcMap["id"],
+						"name":  "",
+						"input": "",
+					}
+					runtime.EventsEmit(a.ctx, "ai:block_start", map[string]interface{}{
+						"index": currentBlockIndex,
+						"content_block": map[string]interface{}{
+							"type": "tool_use",
+							"id":   tcMap["id"],
+						},
+					})
+				}
+
+				atc := activeToolCalls[idx]
+				if fn, ok := tcMap["function"].(map[string]interface{}); ok {
+					if name, ok := fn["name"].(string); ok && name != "" {
+						atc["name"] = name
+					}
+					if args, ok := fn["arguments"].(string); ok && args != "" {
+						if atc["input"] == nil {
+							atc["input"] = ""
+						}
+						atc["input"] = atc["input"].(string) + args
+						runtime.EventsEmit(a.ctx, "ai:input_json_delta", map[string]interface{}{
+							"partial_json": args,
+						})
+					}
+				}
+			}
+		}
+
+		// Handle finish_reason on the choice level
+		if finishReason, ok := choice["finish_reason"].(string); ok && finishReason != "" && finishReason != "null" {
+			// Close any open text block
+			if currentBlock != nil {
+				contentBlocks = append(contentBlocks, currentBlock)
+				runtime.EventsEmit(a.ctx, "ai:content_block_stop", map[string]interface{}{
+					"index": currentBlockIndex,
+				})
+				currentBlock = nil
+			}
+			// Close tool_use blocks and parse their input JSON
+			for idx, tc := range activeToolCalls {
+				if inputStr, ok := tc["input"].(string); ok && inputStr != "" {
+					var inputObj map[string]interface{}
+					if err := json.Unmarshal([]byte(inputStr), &inputObj); err == nil {
+						tc["input"] = inputObj
+					}
+				}
+				contentBlocks = append(contentBlocks, tc)
+				runtime.EventsEmit(a.ctx, "ai:content_block_stop", map[string]interface{}{
+					"index": idx,
+				})
+			}
+			activeToolCalls = make(map[int]map[string]interface{})
+
+			stopReason := "end_turn"
+			if finishReason == "tool_calls" {
+				stopReason = "tool_use"
+			} else if finishReason == "length" {
+				stopReason = "max_tokens"
+			} else if finishReason == "stop" {
+				stopReason = "end_turn"
+			}
+
+			runtime.EventsEmit(a.ctx, "ai:done", map[string]interface{}{
+				"message": map[string]interface{}{
+					"role":    messageRole,
+					"content": contentBlocks,
+				},
+				"stop_reason": stopReason,
+			})
+
+			fullMessage := map[string]interface{}{
+				"role":    messageRole,
+				"content": contentBlocks,
+			}
+			resultJSON, _ := json.Marshal(fullMessage)
+			return string(resultJSON), nil
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return "", err
+	}
+
+	if len(contentBlocks) > 0 || len(activeToolCalls) > 0 {
+		for _, tc := range activeToolCalls {
+			contentBlocks = append(contentBlocks, tc)
+		}
+		fullMessage := map[string]interface{}{
+			"role":    messageRole,
+			"content": contentBlocks,
+		}
+		resultJSON, _ := json.Marshal(fullMessage)
+		return string(resultJSON), nil
+	}
+
+	return "", fmt.Errorf("stream ended without completion")
 }
 
 // CancelChatStream cancels the currently active ChatCompletion stream.
