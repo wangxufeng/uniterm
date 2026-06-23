@@ -75,7 +75,7 @@ export async function chat(options: ChatOptions): Promise<void> {
 
   // Store raw message for history preservation
   ;(options as any)._rawApiMsg = {
-    role: json.role,
+    role: json.role || 'assistant',
     content: rawContent
   }
 

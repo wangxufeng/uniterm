@@ -442,9 +442,9 @@ export const useAIStore = defineStore('ai', () => {
             return true
           })
           if (filtered.length === 0 && !m.content && !(m.pendingTools?.length || pendingCommand.value?.messageId === m.id)) continue
-          result.push({ ...raw, content: filtered })
+          result.push({ ...raw, role: (raw.role as string) || 'assistant', content: filtered })
         } else {
-          result.push({ ...raw })
+          result.push({ ...raw, role: (raw.role as string) || 'assistant' })
         }
         continue
       }
@@ -475,7 +475,7 @@ export const useAIStore = defineStore('ai', () => {
       if (m.role === 'user' && m._contextHeader) {
         result.push({ role: m.role, content: m._contextHeader + '\n\n' + m.content })
       } else {
-        result.push({ role: m.role, content: m.content })
+        result.push({ role: m.role || 'user', content: m.content })
       }
     }
 
