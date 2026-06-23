@@ -395,8 +395,24 @@
         <el-form-item :label="t('settings.modelName')">
           <el-input v-model="modelForm.name" />
         </el-form-item>
+        <el-form-item :label="t('settings.modelProtocol')">
+          <el-select v-model="modelForm.protocol" style="width: 100%">
+            <el-option label="Anthropic" value="anthropic" />
+            <el-option label="OpenAI" value="openai" />
+          </el-select>
+        </el-form-item>
         <el-form-item :label="t('settings.modelBaseURL')">
-          <el-input v-model="modelForm.baseURL" />
+          <el-input v-model="modelForm.baseURL" :placeholder="modelForm.protocol === 'openai' ? 'https://api.openai.com/v1' : 'https://api.anthropic.com/v1'" />
+        </el-form-item>
+        <el-form-item :label="t('settings.modelUserAgent')">
+          <el-select v-model="modelForm.userAgent" style="width: 100%" filterable allow-create>
+            <el-option
+              v-for="ua in USER_AGENT_PRESETS"
+              :key="ua.value"
+              :label="ua.label"
+              :value="ua.value"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item :label="t('settings.modelApiKey')">
           <el-input v-model="modelForm.apiKey" type="password" show-password />
@@ -412,6 +428,15 @@
               {{ t('settings.fetchModels') }}
             </el-button>
           </div>
+        </el-form-item>
+        <el-form-item>
+          <el-button size="small" :loading="testingConnection" @click="testConnection">
+            {{ t('settings.testConnection') }}
+          </el-button>
+          <span v-if="testResult != null" :class="testResult ? 'test-ok' : 'test-fail'" style="margin-left: 8px; font-size: 13px;">
+            {{ testResult ? t('settings.testSuccess') : t('settings.testFailed') }}
+          </span>
+          <span v-if="testError" style="margin-left: 8px; font-size: 12px; color: #e5534b; word-break: break-all;">{{ testError }}</span>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -432,13 +457,13 @@
 import { ref, reactive, watch, computed } from 'vue'
 import { Settings, Monitor, MessageCircleMore, Info, RefreshCw, Pencil, Trash2, Globe, Keyboard } from '@lucide/vue'
 import { msg } from '../services/message'
-import { FetchModels } from '../../wailsjs/go/main/App'
+import { FetchModels, ChatCompletion } from '../../wailsjs/go/main/App'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useSyncStore } from '../stores/syncStore'
 import { useUpdateCheck } from '../composables/useUpdateCheck'
 import { useI18n } from '../i18n'
 import { BrowserOpenURL } from '../../wailsjs/runtime'
-import { TERMINAL_THEMES, FONT_OPTIONS, LANGUAGE_OPTIONS, DEFAULT_KEYBOARD, SHORTCUT_LABELS } from '../types/settings'
+import { TERMINAL_THEMES, FONT_OPTIONS, LANGUAGE_OPTIONS, DEFAULT_KEYBOARD, SHORTCUT_LABELS, USER_AGENT_PRESETS } from '../types/settings'
 import type { AIModelConfig, ShortcutAction, KeyBinding, KeyboardSettings } from '../types/settings'
 import { uninstallGlobalListener, installGlobalListener } from '../composables/useKeyboardShortcuts'
 import AddRepoDialog from './AddRepoDialog.vue'
@@ -609,6 +634,9 @@ const categories = computed(() => {
 const showModelForm = ref(false)
 const modelSuggestions = ref<Array<{ value: string }>>([])
 const modelFetching = ref(false)
+const testingConnection = ref(false)
+const testResult = ref<boolean | null>(null)
+const testError = ref('')
 const editingModel = ref<AIModelConfig | null>(null)
 const modelForm = reactive({
   id: '',
@@ -616,6 +644,8 @@ const modelForm = reactive({
   baseURL: '',
   model: '',
   apiKey: '',
+  protocol: 'anthropic' as 'anthropic' | 'openai',
+  userAgent: 'uniTerm' as string,
 })
 
 function editModel(model: AIModelConfig) {
@@ -634,7 +664,9 @@ function saveModel() {
       name: modelForm.name || 'Unnamed',
       baseURL: modelForm.baseURL,
       model: modelForm.model,
-      apiKey: modelForm.apiKey
+      apiKey: modelForm.apiKey,
+      protocol: modelForm.protocol,
+      userAgent: modelForm.userAgent || undefined
     })
   }
   showModelForm.value = false
@@ -648,6 +680,8 @@ function resetModelForm() {
   modelForm.baseURL = ''
   modelForm.model = ''
   modelForm.apiKey = ''
+  modelForm.protocol = 'anthropic'
+  modelForm.userAgent = 'uniTerm'
   modelSuggestions.value = []
 }
 
@@ -668,6 +702,40 @@ async function fetchModelList() {
     msg.error(t('settings.fetchModelsFailed'))
   } finally {
     modelFetching.value = false
+  }
+}
+
+async function testConnection() {
+  if (!modelForm.apiKey || !modelForm.baseURL || !modelForm.model) {
+    msg.warning(t('settings.testConnectionHint'))
+    return
+  }
+  testingConnection.value = true
+  testResult.value = null
+  testError.value = ''
+  try {
+    const testMsg = JSON.stringify({
+      model: modelForm.model,
+      max_tokens: 10,
+      system: 'Reply with exactly the word: ok',
+      messages: [{ role: 'user', content: 'Say ok' }]
+    })
+    await ChatCompletion(
+      modelForm.apiKey,
+      modelForm.baseURL,
+      modelForm.model,
+      testMsg,
+      modelForm.protocol,
+      modelForm.userAgent || ''
+    )
+    testResult.value = true
+    msg.success(t('settings.testSuccess'))
+  } catch (e: any) {
+    testResult.value = false
+    testError.value = e?.message || String(e)
+    msg.error(t('settings.testFailed'))
+  } finally {
+    testingConnection.value = false
   }
 }
 

@@ -24,7 +24,18 @@ export interface AIModelConfig {
   apiKey: string
   baseURL: string
   model: string
+  protocol: 'anthropic' | 'openai'
+  userAgent?: string
 }
+
+export const USER_AGENT_PRESETS: { label: string; value: string }[] = [
+  { label: 'uniTerm', value: 'uniTerm' },
+  { label: 'Claude Code', value: 'claude-code/1.0' },
+  { label: 'Cursor', value: 'Cursor/1.0' },
+  { label: 'Cline', value: 'Cline/1.0' },
+  { label: 'OpenCode', value: 'opencode' },
+  { label: 'ChatGPT Desktop', value: 'ChatGPT-Desktop/1.0' },
+]
 
 export interface AISettings {
   models: AIModelConfig[]
@@ -108,7 +119,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
         name: 'Default',
         apiKey: '',
         baseURL: 'https://api.openai.com/v1',
-        model: 'gpt-4o'
+        model: 'gpt-4o',
+        protocol: 'anthropic' as const
       }
     ],
     activeModelId: 'model-default'
