@@ -37,6 +37,7 @@
   "conn.password": "비밀번호",
   "conn.keyPath": "키 경로",
   "conn.keyPathPlaceholder": "예: ~/.ssh/id_rsa",
+  "conn.selectKeyFile": "키 파일 선택",
   "conn.cancel": "취소",
   "conn.saveConnect": "저장 후 연결",
   "conn.save": "저장",

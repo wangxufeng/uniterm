@@ -78,7 +78,15 @@
         <el-input v-model="form.password" type="password" show-password :key="passwordInputKey" />
       </el-form-item>
       <el-form-item v-if="form.authType === 'key' && (form.type === 'ssh' || form.type === 'mosh')" :label="t('conn.keyPath')">
-        <el-input v-model="form.keyPath" :placeholder="t('conn.keyPathPlaceholder')" />
+        <el-input v-model="form.keyPath" :placeholder="t('conn.keyPathPlaceholder')">
+          <template #append>
+            <el-tooltip :content="t('conn.selectKeyFile')" placement="top">
+              <el-button :aria-label="t('conn.selectKeyFile')" @click="selectKeyFile">
+                <el-icon><FolderOpen :size="16" /></el-icon>
+              </el-button>
+            </el-tooltip>
+          </template>
+        </el-input>
       </el-form-item>
       <el-form-item v-if="form.type === 'database' && form.dbType !== 'rqlite'" :label="t('db.databases')">
         <el-input v-model="form.dbName" :placeholder="t('db.databases')" />
@@ -229,8 +237,9 @@ import { reactive, computed, watch, ref, onMounted } from 'vue'
 import { useConnectionStore } from '../stores/connectionStore'
 import { useI18n } from '../i18n'
 import type { ConnectionConfig, PostLoginExpectStep } from '../types/session'
-import { GetPlatform } from '../../wailsjs/go/main/App'
-import { Plus, Trash2, ChevronRight } from '@lucide/vue'
+import { selectKeyPath } from '../services/keyPathPicker'
+import { GetPlatform, OpenFileDialog } from '../../wailsjs/go/main/App'
+import { Plus, Trash2, ChevronRight, FolderOpen } from '@lucide/vue'
 
 const { t } = useI18n()
 const connectionStore = useConnectionStore()
@@ -479,6 +488,14 @@ async function confirmNewGroup() {
   form.groupId = group.id
   selectedGroupId.value = group.id
   showNewGroupDialog.value = false
+}
+
+async function selectKeyFile() {
+  try {
+    form.keyPath = await selectKeyPath(OpenFileDialog, form.keyPath || '')
+  } catch (e) {
+    console.error('select key file:', e)
+  }
 }
 
 function generateUniqueName(name: string): string {
