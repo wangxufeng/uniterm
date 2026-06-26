@@ -207,6 +207,7 @@
   "sftp.dialog.conflictRename": "Авто переименование",
   "settings.title": "Настройки",
   "settings.basic": "Основные",
+  "settings.app": "Приложение",
   "settings.terminal": "Терминал",
   "settings.ai": "ИИ-ассистент",
   "settings.about": "О программе",

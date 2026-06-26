@@ -207,6 +207,7 @@
   "sftp.dialog.conflictRename": "자동 이름 변경",
   "settings.title": "설정",
   "settings.basic": "기본",
+  "settings.app": "앱",
   "settings.terminal": "터미널",
   "settings.ai": "AI 어시스턴트",
   "settings.about": "정보",

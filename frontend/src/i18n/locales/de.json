@@ -207,6 +207,7 @@
   "sftp.dialog.conflictRename": "Auto Umbenennen",
   "settings.title": "Einstellungen",
   "settings.basic": "Allgemein",
+  "settings.app": "App",
   "settings.terminal": "Terminal",
   "settings.ai": "KI-Assistent",
   "settings.about": "Über",

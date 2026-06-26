@@ -207,6 +207,7 @@
   "sftp.dialog.conflictRename": "自動リネーム",
   "settings.title": "設定",
   "settings.basic": "基本",
+  "settings.app": "アプリ",
   "settings.terminal": "ターミナル",
   "settings.ai": "AI アシスタント",
   "settings.about": "について",

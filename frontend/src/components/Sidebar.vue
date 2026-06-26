@@ -242,6 +242,28 @@
 
     <template v-if="activeView === 'personalization'">
       <div class="personalization-panel">
+        <div class="persist-section-title">{{ t('settings.app') }}</div>
+        <div class="persist-section">
+          <div class="persist-label">{{ t('settings.theme') }}</div>
+          <el-select v-model="settingsStore.settings.theme" @change="settingsStore.save()">
+            <el-option :label="t('settings.themeDark')" value="dark" />
+            <el-option :label="t('settings.themeDeepBlue')" value="deep-blue" />
+            <el-option :label="t('settings.themeLight')" value="light" />
+            <el-option :label="t('settings.themeSystem')" value="system" />
+          </el-select>
+        </div>
+        <div class="persist-section">
+          <div class="persist-label">{{ t('settings.language') }}</div>
+          <el-select :model-value="settingsStore.settings.language" @change="settingsStore.updateLanguage">
+            <el-option
+              v-for="lang in LANGUAGE_OPTIONS"
+              :key="lang.value"
+              :label="lang.native"
+              :value="lang.value"
+            />
+            <el-option :label="t('settings.langSystem')" value="system" />
+          </el-select>
+        </div>
         <div class="persist-section-title">{{ t('settings.terminal') }}</div>
         <div class="persist-section">
           <div class="persist-label">{{ t('settings.colorScheme') }}</div>
@@ -432,7 +454,7 @@ import ConnectionForm from './ConnectionForm.vue'
 import QuickCommandsPanel from './QuickCommandsPanel.vue'
 import HistoryPanel from './HistoryPanel.vue'
 import type { ConnectionConfig, ConnectionGroup } from '../types/session'
-import { FONT_OPTIONS, TERMINAL_THEMES } from '../types/settings'
+import { FONT_OPTIONS, TERMINAL_THEMES, LANGUAGE_OPTIONS } from '../types/settings'
 import type { TerminalTheme } from '../types/settings'
 import { GetSystemFonts } from '../../wailsjs/go/main/App'
 

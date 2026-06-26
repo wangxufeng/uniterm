@@ -207,6 +207,7 @@
   "sftp.dialog.conflictRename": "Auto renombrar",
   "settings.title": "Configuración",
   "settings.basic": "Básica",
+  "settings.app": "Aplicación",
   "settings.terminal": "Terminal",
   "settings.ai": "Asistente de IA",
   "settings.about": "Acerca de",

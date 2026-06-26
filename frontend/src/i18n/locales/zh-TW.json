@@ -207,6 +207,7 @@
   "sftp.dialog.conflictRename": "自動重命名",
   "settings.title": "設定",
   "settings.basic": "基礎設定",
+  "settings.app": "應用設定",
   "settings.terminal": "終端機設定",
   "settings.ai": "AI 助理設定",
   "settings.about": "關於",
