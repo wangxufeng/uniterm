@@ -36,7 +36,7 @@
 Autonomous AI Agent that works like Claude Code — independently plans and executes multi-turn shell commands directly in your terminal.
 
 - **Autonomous Multi-Turn Execution** — The AI Agent can plan, execute, observe results, and iterate across multiple rounds of shell commands without manual intervention.
-- **LLM Integration** — Sidebar chat with Anthropic-compatible API, supporting Claude and other compliant models.
+- **LLM Integration** — Sidebar chat with Anthropic/OpenAI-compatible API, supporting Claude, GPT and other compliant models.
 - **Flexible Execution Modes** — Bypass, dangerous only, dangerous + write, or confirm all — you control how much oversight the AI Agent needs.
 - **Persistent Conversations** — Chat history is saved per session, so conversations survive app restarts.
 - **Terminal Integration** — AI commands execute directly in the active terminal tab, with optional pinning to a specific tab or following your active one. Collaborate side-by-side in split panes, each with its own terminal context.
@@ -131,7 +131,7 @@ Get the latest pre-built binaries from [GitHub Releases](https://github.com/ys-l
 | Backend | Go |
 | Frontend | Vue 3 + Pinia + Element Plus |
 | Terminal | xterm.js |
-| AI Protocol | Anthropic Messages API |
+| AI Protocol | Anthropic Messages API / OpenAI Chat Completions API |
 
 ## Prerequisites
 

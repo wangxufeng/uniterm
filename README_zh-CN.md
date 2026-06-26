@@ -36,7 +36,7 @@
 自主执行的 AI Agent，像 Claude Code 一样独立规划并执行多轮 Shell 命令，直接在终端中完成复杂任务。
 
 - **自主多轮执行** — AI Agent 能够自主规划、执行、观察结果并迭代，在多轮 Shell 命令中无需人工干预即可完成复杂操作。
-- **大模型集成** — 侧边栏对话，兼容 Anthropic 协议，支持 Claude 及其他兼容模型。
+- **大模型集成** — 侧边栏对话，兼容 Anthropic / OpenAI 协议，支持 Claude、GPT 及其他兼容模型。
 - **灵活的执行模式** — 提供免确认、仅高危确认、写操作确认、全部确认四种模式，自主权由你掌控。
 - **对话持久化** — 会话聊天记录按标签页保存，重新打开应用后历史记录仍然保留。
 - **终端智能协作** — AI 命令直接在当前终端标签页中执行，支持固定到指定标签页或跟随当前激活终端。分屏中人与 AI 各司其职，同屏协作互不干扰。
@@ -131,7 +131,7 @@
 | 后端 | Go |
 | 前端 | Vue 3 + Pinia + Element Plus |
 | 终端引擎 | xterm.js |
-| AI 协议 | Anthropic Messages API |
+| AI 协议 | Anthropic Messages API / OpenAI Chat Completions API |
 
 ## 环境要求
 

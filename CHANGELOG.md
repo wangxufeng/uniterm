@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.1.2
+
+- **new** Added 22 terminal themes with a sidebar personalization panel for one-click theme switching.
+- **new** SFTP built-in text editor with encoding & line ending configuration.
+- **new** SFTP new file/folder creation and copy/paste/cut.
+- **new** Prompt for credentials when connecting without saved username or password.
+- **improve** SFTP chmod dialog now supports octal permission input.
+- **improve** Connection-type icons in sidebar session list.
+- **improve** Sidebar visibility now persisted to local state file across restarts.
+- **bugfix** Fixed history panel not updating in real time.
+- **bugfix** Fixed missing overwrite confirmation when uploading files with same name in SFTP.
+- **bugfix** Fixed paste event not dispatched to all panels in broadcast mode due to SFTP overlay interference.
+- **bugfix** Fixed `__AI_KEY_` marker residue in AI output.
+- **bugfix** Fixed AI command heredoc syntax compatibility.
+- **bugfix** Fixed SFTP drive dropdown closing on mousedown before click event fires.
+
 ## v1.1.1
 
 - **new** Prompt for SSH password directly in the terminal when no password is saved.
