@@ -192,6 +192,7 @@ uniTerm/
 感谢以下朋友为 uniTerm 贡献代码与改进，以及每一位提交 issue 和建议的朋友，是你们让 uniTerm 变得更好 ❤️
 
 - [@yuwei5380](https://github.com/yuwei5380)
+- [@surenwuyuwuqiu](https://github.com/surenwuyuwuqiu)
 
 ## 开源协议
 

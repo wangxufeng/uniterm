@@ -192,6 +192,7 @@ Issues, suggestions, and feedback are welcome at [GitHub Issues](https://github.
 Thanks to the following people for contributing code and improvements, and to everyone who reported issues and shared suggestions — you help make uniTerm better ❤️
 
 - [@yuwei5380](https://github.com/yuwei5380)
+- [@surenwuyuwuqiu](https://github.com/surenwuyuwuqiu)
 
 ## License
 
