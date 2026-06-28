@@ -118,7 +118,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, shallowRef, triggerRef, computed, watch, nextTick, onMounted } from 'vue'
+import { ref, shallowRef, computed, watch, nextTick, onMounted } from 'vue'
 import { Pencil, Trash2 } from '@lucide/vue'
 import { ElMessageBox } from 'element-plus'
 import { useI18n } from '../i18n'
@@ -281,8 +281,11 @@ async function onCellEditConfirm() {
 
   try {
     await DBUpdateRow(props.sessionId, props.dbName || '', props.tableName, { [colName]: value }, where)
-    queryResult.value!.rows[rowIndex][colName] = value
-    triggerRef(queryResult)
+    const updatedRow = { ...queryResult.value!.rows[rowIndex], [colName]: value }
+    queryResult.value = {
+      ...queryResult.value!,
+      rows: queryResult.value!.rows.map((r, i) => i === rowIndex ? updatedRow : r)
+    }
     error.value = ''
     emit('cellUpdated')
   } catch (e: any) {
@@ -318,8 +321,10 @@ async function onDeleteRow(rowIndex: number) {
 
   try {
     await DBDeleteRow(props.sessionId, props.dbName || '', props.tableName, where)
-    queryResult.value!.rows.splice(rowIndex, 1)
-    triggerRef(queryResult)
+    queryResult.value = {
+      ...queryResult.value!,
+      rows: queryResult.value!.rows.filter((_, i) => i !== rowIndex)
+    }
     error.value = ''
     emit('cellUpdated')
   } catch (e: any) {
@@ -478,10 +483,15 @@ async function onEditRowConfirm() {
 
   try {
     await DBUpdateRow(props.sessionId, props.dbName || '', props.tableName, set, where)
+    const idx = editingRowIndex.value
+    const updatedRow = { ...queryResult.value!.rows[idx] }
     for (const col of editRowColumns.value) {
-      queryResult.value!.rows[editingRowIndex.value][col] = editNulls.value[col] ? null : editRowValues.value[col]
+      updatedRow[col] = editNulls.value[col] ? null : editRowValues.value[col]
     }
-    triggerRef(queryResult)
+    queryResult.value = {
+      ...queryResult.value!,
+      rows: queryResult.value!.rows.map((r, i) => i === idx ? updatedRow : r)
+    }
     error.value = ''
     editingRow.value = false
     emit('cellUpdated')
