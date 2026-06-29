@@ -60,6 +60,9 @@ func (sm *SessionManager) Create(sessionType string, config ConnectionConfig) (S
 	case "serial":
 		s = NewSerialSession(config.ID)
 
+	case "redis":
+		s = NewRedisSession(config.ID)
+
 	default:
 		return nil, fmt.Errorf("unsupported session type: %s", sessionType)
 	}

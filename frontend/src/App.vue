@@ -59,6 +59,11 @@
               :host-name="getPanelConfig(activeTab.panelId)?.host || ''"
               :default-db-name="getPanelConfig(activeTab.panelId)?.dbName"
             />
+            <RedisTabContent
+              v-else-if="activeTab.type === 'redis'"
+              :key="activeTab.id"
+              :session-id="getPanelSessionId(activeTab.panelId) || ''"
+            />
             <MonitorTabContent
               v-else-if="activeTab.type === 'monitor'"
               :key="activeTab.id"
@@ -110,6 +115,7 @@ import RDPTabContent from './components/RDPTabContent.vue'
 import VNCTabContent from './components/VNCTabContent.vue'
 import SPICETabContent from './components/SPICETabContent.vue'
 import DBTabContent from './components/DBTabContent.vue'
+import RedisTabContent from './components/RedisTabContent.vue'
 import MonitorTabContent from './components/MonitorTabContent.vue'
 import ConnectionForm from './components/ConnectionForm.vue'
 import AISidebar from './components/AISidebar.vue'
@@ -616,6 +622,13 @@ async function closeTab(tabId: string) {
       try { await CloseSession(p.sessionId) } catch (_) {}
     }
   }
+  // Close redis session
+  if (tab && tab.type === 'redis') {
+    const p = panelStore.getPanel(tab.panelId)
+    if (p?.sessionId) {
+      try { await CloseSession(p.sessionId) } catch (_) {}
+    }
+  }
   // Close monitor session
   if (tab && tab.type === 'monitor') {
     const p = panelStore.getPanel(tab.panelId)
@@ -900,10 +913,14 @@ async function onConnectDB(config: ConnectionConfig) {
   const panel = panelStore.createPanel(config, 'database')
   panel.title = displayTitle
   const tab = tabStore.createDBTab(displayTitle, panel.id)
+  if (config.dbType === 'redis') {
+    tab.type = 'redis' as any
+  }
   panelStore.movePanelToTab(panel.id, tab.id)
 
   try {
-    const info = await CreateSession('database', config)
+    const sessionType = config.dbType === 'redis' ? 'redis' : 'database'
+    const info = await CreateSession(sessionType, config)
     panelStore.bindSession(panel.id, info.id)
     sessionStore.initSession(info.id)
   } catch (e: any) {

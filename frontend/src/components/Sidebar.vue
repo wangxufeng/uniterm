@@ -525,6 +525,7 @@ const TYPE_LABELS: Record<string, string> = {
   'database:rqlite': 'rqlite',
   'database:oracle': 'Oracle',
   'database:sqlserver': 'SQL Server',
+  'database:redis': 'Redis',
 }
 
 const availableTypes = computed<TypeOption[]>(() => {

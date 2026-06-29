@@ -58,6 +58,7 @@
             <el-radio-button label="oracle">Oracle</el-radio-button>
             <el-radio-button label="sqlserver">SQL Server</el-radio-button>
             <el-radio-button label="rqlite">rqlite</el-radio-button>
+            <el-radio-button label="redis">Redis</el-radio-button>
           </el-radio-group>
         </template>
       </el-form-item>
@@ -67,7 +68,7 @@
       <el-form-item :label="t('conn.port')">
         <el-input-number v-model="form.port" :min="0" :max="65535" />
       </el-form-item>
-      <el-form-item v-if="form.type !== 'vnc' && form.type !== 'spice' && !(form.type === 'database' && form.dbType === 'rqlite')" :label="t('conn.user')">
+      <el-form-item v-if="form.type !== 'vnc' && form.type !== 'spice' && !(form.type === 'database' && (form.dbType === 'rqlite' || form.dbType === 'redis'))" :label="t('conn.user')">
         <el-input v-model="form.user" :placeholder="t('conn.userPlaceholder')" />
       </el-form-item>
       <el-form-item v-if="form.type === 'ssh' || form.type === 'mosh'" :label="t('conn.authType')">
@@ -90,7 +91,7 @@
           </template>
         </el-input>
       </el-form-item>
-      <el-form-item v-if="form.type === 'database' && form.dbType !== 'rqlite'" :label="t('db.databases')">
+      <el-form-item v-if="form.type === 'database' && form.dbType !== 'rqlite' && form.dbType !== 'redis'" :label="t('db.databases')">
         <el-input v-model="form.dbName" :placeholder="t('db.databases')" />
       </el-form-item>
       <div class="advanced-toggle" @click="showAdvanced = !showAdvanced">
@@ -450,6 +451,7 @@ watch(() => form.dbType, (newType) => {
   else if (newType === 'rqlite') form.port = 4001
   else if (newType === 'oracle') form.port = 1521
   else if (newType === 'sqlserver') form.port = 1433
+  else if (newType === 'redis') form.port = 6379
 })
 
 // Sync resolution picker to form fields

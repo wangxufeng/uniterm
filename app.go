@@ -613,8 +613,8 @@ func (a *App) CreateSession(sessionType string, config session.ConnectionConfig)
 		runtime.EventsEmit(a.ctx, "session:status", payload)
 	})
 
-	// Database sessions connect synchronously so errors are returned to the frontend.
-	if sessionType == "database" {
+	// Database and Redis sessions connect synchronously so errors are returned to the frontend.
+	if sessionType == "database" || sessionType == "redis" {
 		log.Writef("[CreateSession] connecting database session synchronously...")
 		if err := s.Connect(config); err != nil {
 			log.Writef("[CreateSession] database connect failed: %v", err)
@@ -2119,6 +2119,228 @@ func (a *App) dbProvider(sessionID string) (*session.DatabaseSession, database.P
 		return nil, nil, err
 	}
 	return ds, p, nil
+}
+
+func (a *App) redisSession(sessionID string) (*session.RedisSession, error) {
+	s, ok := a.sessionManager.Get(sessionID)
+	if !ok {
+		return nil, fmt.Errorf("session not found: %s", sessionID)
+	}
+	rs, ok := s.(*session.RedisSession)
+	if !ok {
+		return nil, fmt.Errorf("session is not a redis session: %s (type=%s)", sessionID, s.Type())
+	}
+	return rs, nil
+}
+
+// ── Redis methods ──
+
+func (a *App) RedisPing(sessionID string) error {
+	rs, err := a.redisSession(sessionID)
+	if err != nil {
+		return err
+	}
+	return rs.Ping()
+}
+
+func (a *App) RedisSwitchDB(sessionID string, idx int) error {
+	rs, err := a.redisSession(sessionID)
+	if err != nil {
+		return err
+	}
+	return rs.SwitchDB(idx)
+}
+
+func (a *App) RedisScanKeys(sessionID string, pattern string, cursor uint64, count int64) (*session.ScanResult, error) {
+	rs, err := a.redisSession(sessionID)
+	if err != nil {
+		return nil, err
+	}
+	return rs.ScanKeys(pattern, cursor, count)
+}
+
+func (a *App) RedisGetKeyInfo(sessionID string, key string) (*session.RedisKeyInfo, error) {
+	rs, err := a.redisSession(sessionID)
+	if err != nil {
+		return nil, err
+	}
+	return rs.GetKeyInfo(key)
+}
+
+func (a *App) RedisDBSize(sessionID string) (int64, error) {
+	rs, err := a.redisSession(sessionID)
+	if err != nil {
+		return 0, err
+	}
+	return rs.DBSize()
+}
+
+func (a *App) RedisKeyspaceInfo(sessionID string) (map[int]int64, error) {
+	rs, err := a.redisSession(sessionID)
+	if err != nil {
+		return nil, err
+	}
+	return rs.KeyspaceInfo()
+}
+
+func (a *App) RedisDeleteKey(sessionID string, key string) error {
+	rs, err := a.redisSession(sessionID)
+	if err != nil {
+		return err
+	}
+	return rs.DeleteKey(key)
+}
+
+func (a *App) RedisKeyExists(sessionID string, key string) (bool, error) {
+	rs, err := a.redisSession(sessionID)
+	if err != nil {
+		return false, err
+	}
+	return rs.KeyExists(key)
+}
+
+func (a *App) RedisGetKeyTTL(sessionID string, key string) (int64, error) {
+	rs, err := a.redisSession(sessionID)
+	if err != nil {
+		return -2, err
+	}
+	return rs.GetKeyTTL(key)
+}
+
+func (a *App) RedisSetKeyTTL(sessionID string, key string, seconds int64) error {
+	rs, err := a.redisSession(sessionID)
+	if err != nil {
+		return err
+	}
+	return rs.SetKeyTTL(key, seconds)
+}
+
+func (a *App) RedisGetString(sessionID string, key string) (string, error) {
+	rs, err := a.redisSession(sessionID)
+	if err != nil {
+		return "", err
+	}
+	return rs.GetString(key)
+}
+
+func (a *App) RedisSetString(sessionID string, key string, value string) error {
+	rs, err := a.redisSession(sessionID)
+	if err != nil {
+		return err
+	}
+	return rs.SetString(key, value)
+}
+
+func (a *App) RedisGetHashAll(sessionID string, key string) ([]session.FieldEntry, error) {
+	rs, err := a.redisSession(sessionID)
+	if err != nil {
+		return nil, err
+	}
+	return rs.GetHashAll(key)
+}
+
+func (a *App) RedisHashSet(sessionID string, key string, field string, value string) error {
+	rs, err := a.redisSession(sessionID)
+	if err != nil {
+		return err
+	}
+	return rs.HashSet(key, field, value)
+}
+
+func (a *App) RedisHashDel(sessionID string, key string, fields []string) (int64, error) {
+	rs, err := a.redisSession(sessionID)
+	if err != nil {
+		return 0, err
+	}
+	return rs.HashDel(key, fields)
+}
+
+func (a *App) RedisGetListRange(sessionID string, key string, start int64, stop int64) ([]string, error) {
+	rs, err := a.redisSession(sessionID)
+	if err != nil {
+		return nil, err
+	}
+	return rs.GetListRange(key, start, stop)
+}
+
+func (a *App) RedisListPush(sessionID string, key string, direction string, values []string) (int64, error) {
+	rs, err := a.redisSession(sessionID)
+	if err != nil {
+		return 0, err
+	}
+	return rs.ListPush(key, direction, values)
+}
+
+func (a *App) RedisListPop(sessionID string, key string, direction string) (string, error) {
+	rs, err := a.redisSession(sessionID)
+	if err != nil {
+		return "", err
+	}
+	return rs.ListPop(key, direction)
+}
+
+func (a *App) RedisListSet(sessionID string, key string, index int64, value string) error {
+	rs, err := a.redisSession(sessionID)
+	if err != nil {
+		return err
+	}
+	return rs.ListSet(key, index, value)
+}
+
+func (a *App) RedisListRemove(sessionID string, key string, value string, count int64) (int64, error) {
+	rs, err := a.redisSession(sessionID)
+	if err != nil {
+		return 0, err
+	}
+	return rs.ListRemove(key, value, count)
+}
+
+func (a *App) RedisGetSetAll(sessionID string, key string) ([]string, error) {
+	rs, err := a.redisSession(sessionID)
+	if err != nil {
+		return nil, err
+	}
+	return rs.GetSetAll(key)
+}
+
+func (a *App) RedisSetAdd(sessionID string, key string, members []string) (int64, error) {
+	rs, err := a.redisSession(sessionID)
+	if err != nil {
+		return 0, err
+	}
+	return rs.SetAdd(key, members)
+}
+
+func (a *App) RedisSetRemove(sessionID string, key string, members []string) (int64, error) {
+	rs, err := a.redisSession(sessionID)
+	if err != nil {
+		return 0, err
+	}
+	return rs.SetRemove(key, members)
+}
+
+func (a *App) RedisGetSortedSetRange(sessionID string, key string, min string, max string) ([]session.ScoredMember, error) {
+	rs, err := a.redisSession(sessionID)
+	if err != nil {
+		return nil, err
+	}
+	return rs.GetSortedSetRange(key, min, max)
+}
+
+func (a *App) RedisZSetAdd(sessionID string, key string, members []session.ScoredMember) (int64, error) {
+	rs, err := a.redisSession(sessionID)
+	if err != nil {
+		return 0, err
+	}
+	return rs.ZSetAdd(key, members)
+}
+
+func (a *App) RedisZSetRemove(sessionID string, key string, members []string) (int64, error) {
+	rs, err := a.redisSession(sessionID)
+	if err != nil {
+		return 0, err
+	}
+	return rs.ZSetRemove(key, members)
 }
 
 func (a *App) GetDatabases(sessionID string) ([]string, error) {
