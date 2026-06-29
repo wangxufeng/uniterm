@@ -193,7 +193,7 @@ export const useTabStore = defineStore('tab', () => {
     }
 
     // Clear AI lock if locked panel was in this tab
-    const removedPanelIds = removed.type === 'terminal' || removed.type === 'settings' || removed.type === 'rdp' || removed.type === 'vnc' || removed.type === 'spice' || removed.type === 'database' || removed.type === 'monitor'
+    const removedPanelIds = removed.type === 'terminal' || removed.type === 'settings' || removed.type === 'rdp' || removed.type === 'vnc' || removed.type === 'spice' || removed.type === 'database' || removed.type === 'redis' || removed.type === 'monitor'
       ? [removed.panelId]
       : removed.type === 'workspace'
         ? removed.panelIds

@@ -129,6 +129,58 @@ export function ReadFileBase64(arg1:string):Promise<string>;
 
 export function ReadFileChunkBase64(arg1:string,arg2:number,arg3:number):Promise<string>;
 
+export function RedisDBSize(arg1:string):Promise<number>;
+
+export function RedisDeleteKey(arg1:string,arg2:string):Promise<void>;
+
+export function RedisGetHashAll(arg1:string,arg2:string):Promise<Array<session.FieldEntry>>;
+
+export function RedisGetKeyInfo(arg1:string,arg2:string):Promise<session.RedisKeyInfo>;
+
+export function RedisGetKeyTTL(arg1:string,arg2:string):Promise<number>;
+
+export function RedisGetListRange(arg1:string,arg2:string,arg3:number,arg4:number):Promise<Array<string>>;
+
+export function RedisGetSetAll(arg1:string,arg2:string):Promise<Array<string>>;
+
+export function RedisGetSortedSetRange(arg1:string,arg2:string,arg3:string,arg4:string):Promise<Array<session.ScoredMember>>;
+
+export function RedisGetString(arg1:string,arg2:string):Promise<string>;
+
+export function RedisHashDel(arg1:string,arg2:string,arg3:Array<string>):Promise<number>;
+
+export function RedisHashSet(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
+
+export function RedisKeyExists(arg1:string,arg2:string):Promise<boolean>;
+
+export function RedisKeyspaceInfo(arg1:string):Promise<Record<number, number>>;
+
+export function RedisListPop(arg1:string,arg2:string,arg3:string):Promise<string>;
+
+export function RedisListPush(arg1:string,arg2:string,arg3:string,arg4:Array<string>):Promise<number>;
+
+export function RedisListRemove(arg1:string,arg2:string,arg3:string,arg4:number):Promise<number>;
+
+export function RedisListSet(arg1:string,arg2:string,arg3:number,arg4:string):Promise<void>;
+
+export function RedisPing(arg1:string):Promise<void>;
+
+export function RedisScanKeys(arg1:string,arg2:string,arg3:number,arg4:number):Promise<session.ScanResult>;
+
+export function RedisSetAdd(arg1:string,arg2:string,arg3:Array<string>):Promise<number>;
+
+export function RedisSetKeyTTL(arg1:string,arg2:string,arg3:number):Promise<void>;
+
+export function RedisSetRemove(arg1:string,arg2:string,arg3:Array<string>):Promise<number>;
+
+export function RedisSetString(arg1:string,arg2:string,arg3:string):Promise<void>;
+
+export function RedisSwitchDB(arg1:string,arg2:number):Promise<void>;
+
+export function RedisZSetAdd(arg1:string,arg2:string,arg3:Array<session.ScoredMember>):Promise<number>;
+
+export function RedisZSetRemove(arg1:string,arg2:string,arg3:Array<string>):Promise<number>;
+
 export function RemoveTempFile(arg1:string):Promise<void>;
 
 export function SaveAIConfig(arg1:store.AIConfig):Promise<void>;
