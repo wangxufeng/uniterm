@@ -68,7 +68,7 @@
       <el-form-item :label="t('conn.port')">
         <el-input-number v-model="form.port" :min="0" :max="65535" />
       </el-form-item>
-      <el-form-item v-if="form.type !== 'vnc' && form.type !== 'spice' && !(form.type === 'database' && form.dbType === 'rqlite')" :label="t('conn.user')">
+      <el-form-item v-if="form.type !== 'vnc' && form.type !== 'spice' && !(form.type === 'database' && (form.dbType === 'rqlite' || form.dbType === 'redis'))" :label="t('conn.user')">
         <el-input v-model="form.user" :placeholder="t('conn.userPlaceholder')" />
       </el-form-item>
       <el-form-item v-if="form.type === 'ssh' || form.type === 'mosh'" :label="t('conn.authType')">
