@@ -72,6 +72,7 @@ func (s *RedisSession) Connect(config ConnectionConfig) error {
 	addr := fmt.Sprintf("%s:%d", config.Host, config.Port)
 	client := redis.NewClient(&redis.Options{
 		Addr:     addr,
+		Username: config.User,
 		Password: config.Password,
 		DB:       0,
 	})
