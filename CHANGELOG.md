@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.2.1
+
+- **new** Added Redis connection support with visual key browser and value editor.
+- **new** SFTP bookmark button for quick directory navigation.
+- **new** Notification dot on inactive tabs when terminal receives new output.
+- **improve** Added local terminal type in connection form with post-login script support.
+- **improve** Added serial port connection type with custom baud rate input.
+- **improve** AI `send_terminal_key` tool now supports `send_enter` parameter (default true) for auto-Enter after input.
+- **improve** Enhanced AI conversation markdown rendering with broader syntax support and improved dark theme readability.
+- **improve** Improved connection retry flow with auto-focus and pre-filled credential dialog.
+- **bugfix** Fixed macOS title bar button misalignment. (@surenwuyuwuqiu)
+- **bugfix** Fixed SFTP fallback to SFTP-level copy when remote cp command fails.
+
+- **bugfix** Fixed garbled CJK input and broken editing keys (Backspace, etc.) in zsh on macOS local terminal. (@surenwuyuwuqiu)
+
+Thanks to @surenwuyuwuqiu for contributions to this release.
+
 ## v1.2.0
 
 - **new** Added Oracle database support. (@yuwei5380)

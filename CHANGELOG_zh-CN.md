@@ -1,5 +1,21 @@
 # 更新日志
 
+## v1.2.1
+
+- **new** 新增 Redis 连接支持，提供可视化键浏览器和值编辑器。
+- **new** SFTP 新增书签按钮，可快速跳转到常用目录。
+- **new** 非活跃标签页在终端有新输出时显示通知圆点。
+- **improve** 连接表单新增本地终端类型，支持登录后执行脚本。
+- **improve** 连接表单新增串口连接类型，支持自定义波特率。
+- **improve** AI `send_terminal_key` 工具新增 `send_enter` 参数（默认 true），交互式回复自动追加回车。
+- **improve** 增强 AI 对话 markdown 渲染，支持更多语法并优化深色主题下的可读性。
+- **improve** 优化连接失败后的重试流程，凭据对话框自动聚焦并预填上次输入。
+- **bugfix** 修复 macOS 标题栏按钮位置偏移的问题。（@surenwuyuwuqiu）
+- **bugfix** 修复 Windows SFTP 服务器上远程复制文件失败的问题（cp 不可用时自动通过 SFTP 协议传输）。
+- **bugfix** 修复 macOS 本地终端 zsh 中文输入乱码、退格键等编辑按键失效的问题。（@surenwuyuwuqiu）
+
+感谢 @surenwuyuwuqiu 对本版本的贡献。
+
 ## v1.2.0
 
 - **new** 新增 Oracle 数据库支持。（@yuwei5380）
