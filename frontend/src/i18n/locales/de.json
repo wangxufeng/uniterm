@@ -229,7 +229,6 @@
   "settings.autoCheckUpdate": "Automatisch nach Updates suchen",
   "settings.openRelease": "Details anzeigen",
   "settings.checkUpdateFailed": "Update-Prüfung fehlgeschlagen",
-  "settings.github": "GitHub",
   "settings.homepage": "Webseite",
   "settings.theme": "Design",
   "settings.themeDark": "Dunkel",

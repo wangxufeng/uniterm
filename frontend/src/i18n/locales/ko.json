@@ -229,7 +229,6 @@
   "settings.autoCheckUpdate": "자동 업데이트 확인",
   "settings.openRelease": "자세히 보기",
   "settings.checkUpdateFailed": "업데이트 확인 실패",
-  "settings.github": "GitHub",
   "settings.homepage": "홈페이지",
   "settings.theme": "테마",
   "settings.themeDark": "다크",

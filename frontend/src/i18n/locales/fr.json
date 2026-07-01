@@ -229,7 +229,6 @@
   "settings.autoCheckUpdate": "Rechercher automatiquement les mises à jour",
   "settings.openRelease": "Voir les détails",
   "settings.checkUpdateFailed": "Échec de la recherche de mises à jour",
-  "settings.github": "GitHub",
   "settings.homepage": "Page d'accueil",
   "settings.theme": "Thème",
   "settings.themeDark": "Sombre",
