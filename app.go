@@ -1022,8 +1022,8 @@ func (a *App) GetAppInfo() AppInfo {
 	}
 }
 
-func (a *App) CheckForUpdate() (*update.UpdateInfo, error) {
-	return update.Check(Version)
+func (a *App) CheckForUpdate(source string) (*update.UpdateInfo, error) {
+	return update.Check(Version, source)
 }
 
 func (a *App) SaveTerminalHistory(entries []store.HistoryEntry) error {

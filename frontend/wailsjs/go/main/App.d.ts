@@ -17,7 +17,7 @@ export function CancelChatStream():Promise<void>;
 
 export function ChatCompletion(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string):Promise<string>;
 
-export function CheckForUpdate():Promise<update.UpdateInfo>;
+export function CheckForUpdate(arg1:string):Promise<update.UpdateInfo>;
 
 export function CloseSession(arg1:string):Promise<void>;
 

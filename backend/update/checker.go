@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ys-ll/uniterm/backend/log"
@@ -21,13 +23,57 @@ type UpdateInfo struct {
 
 type githubRelease struct {
 	TagName string `json:"tag_name"`
-	HTMLURL string `json:"html_url"`
 	Body    string `json:"body"`
 }
 
 type cacheEntry struct {
 	Result    UpdateInfo `json:"result"`
+	Source    string     `json:"source"`
 	Timestamp time.Time  `json:"timestamp"`
+}
+
+func normalizeVersion(v string) string {
+	return strings.TrimPrefix(strings.TrimSpace(v), "v")
+}
+
+func versionParts(v string) []int {
+	parts := strings.Split(v, ".")
+	result := make([]int, 0, len(parts))
+	for _, p := range parts {
+		n, _ := strconv.Atoi(p)
+		result = append(result, n)
+	}
+	return result
+}
+
+func versionGreater(latest, current string) bool {
+	latest = normalizeVersion(latest)
+	current = normalizeVersion(current)
+	lp := versionParts(latest)
+	cp := versionParts(current)
+	for i := 0; i < len(lp) || i < len(cp); i++ {
+		var ln, cn int
+		if i < len(lp) {
+			ln = lp[i]
+		}
+		if i < len(cp) {
+			cn = cp[i]
+		}
+		if ln > cn {
+			return true
+		}
+		if ln < cn {
+			return false
+		}
+	}
+	return false
+}
+
+func shouldUpdate(current, latest string) bool {
+	if current == "dev" {
+		return true
+	}
+	return versionGreater(latest, current)
 }
 
 const cacheTTL = 5 * time.Minute
@@ -69,22 +115,31 @@ func saveCache(entry *cacheEntry) {
 	_ = os.WriteFile(path, data, 0600)
 }
 
-// Check compares the current version against the latest GitHub release.
-func Check(currentVersion string) (*UpdateInfo, error) {
-	if cached := loadCache(); cached != nil {
+// Check compares the current version against the latest release from the given source.
+func Check(currentVersion, source string) (*UpdateInfo, error) {
+	if source == "" {
+		source = "github"
+	}
+
+	if cached := loadCache(); cached != nil && cached.Source == source {
 		result := cached.Result
 		result.Current = currentVersion
-		result.HasUpdate = result.Latest != currentVersion
-		log.Writef("[update] returning disk-cached result, age=%s", time.Since(cached.Timestamp))
+		result.HasUpdate = shouldUpdate(currentVersion, result.Latest)
+		log.Writef("[update] returning disk-cached result, source=%s, age=%s", source, time.Since(cached.Timestamp))
 		return &result, nil
 	}
 
-	log.Writef("[update] Check called, current=%s", currentVersion)
+	log.Writef("[update] Check called, current=%s, source=%s", currentVersion, source)
+
+	apiURL := "https://api.github.com/repos/ys-ll/uniterm/releases/latest"
+	if source == "gitee" {
+		apiURL = "https://gitee.com/api/v5/repos/ys-l/uniterm/releases/latest"
+	}
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	req, err := http.NewRequest(
 		"GET",
-		"https://api.github.com/repos/ys-ll/uniterm/releases/latest",
+		apiURL,
 		nil,
 	)
 	if err != nil {
@@ -100,7 +155,7 @@ func Check(currentVersion string) (*UpdateInfo, error) {
 	}
 	defer resp.Body.Close()
 
-	log.Writef("[update] GitHub API response status: %d", resp.StatusCode)
+	log.Writef("[update] %s API response status: %d", source, resp.StatusCode)
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status: %d", resp.StatusCode)
@@ -114,14 +169,19 @@ func Check(currentVersion string) (*UpdateInfo, error) {
 
 	log.Writef("[update] latest=%s", release.TagName)
 
+	releaseURL := "https://github.com/ys-ll/uniterm/releases/latest"
+	if source == "gitee" {
+		releaseURL = "https://gitee.com/ys-l/uniterm/releases/latest"
+	}
+
 	result := UpdateInfo{
 		Current:    currentVersion,
 		Latest:     release.TagName,
-		ReleaseURL: release.HTMLURL,
-		HasUpdate:  release.TagName != currentVersion,
+		ReleaseURL: releaseURL,
+		HasUpdate:  shouldUpdate(currentVersion, release.TagName),
 	}
 
-	saveCache(&cacheEntry{Result: result, Timestamp: time.Now()})
+	saveCache(&cacheEntry{Result: result, Source: source, Timestamp: time.Now()})
 
 	return &result, nil
 }

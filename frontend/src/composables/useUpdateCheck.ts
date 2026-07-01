@@ -1,16 +1,26 @@
-import { reactive, ref, watch } from 'vue'
+import { reactive, ref, watch, h } from 'vue'
 import { ElMessage } from 'element-plus'
 import { msg } from '../services/message'
 import { CheckForUpdate, GetAppInfo } from '../../wailsjs/go/main/App'
-import { useI18n } from '../i18n'
+import { BrowserOpenURL } from '../../wailsjs/runtime/runtime'
+import { useI18n, locale } from '../i18n'
 import { useSettingsStore } from '../stores/settingsStore'
 import type { UpdateInfo } from '../types/settings'
 
 function showUpdateNotification(info: UpdateInfo) {
   const { t } = useI18n()
   ElMessage({
-    message: t('settings.foundNewVersion') + ': ' + info.latest + ' <a href="#" onclick="event.preventDefault();window.runtime.BrowserOpenURL(\'' + info.releaseUrl + '\')" style="color:inherit;text-decoration:underline;">' + t('settings.openRelease') + '</a>',
-    dangerouslyUseHTMLString: true,
+    message: h('div', null, [
+      `${t('settings.foundNewVersion')}: ${info.latest} `,
+      h('a', {
+        href: '#',
+        style: 'color:inherit;text-decoration:underline;',
+        onClick: (e: Event) => {
+          e.preventDefault()
+          BrowserOpenURL(info.releaseUrl)
+        },
+      }, t('settings.openRelease')),
+    ]),
     type: 'success',
     duration: 0,
     showClose: true,
@@ -41,9 +51,10 @@ function stopTimer() {
 
 async function checkForUpdate(showStatus = false): Promise<UpdateInfo | null> {
   checking.value = true
+  const updateSource = locale.value === 'zh-CN' ? 'gitee' : 'github'
   try {
     const info = await Promise.race([
-      CheckForUpdate(),
+      CheckForUpdate(updateSource),
       new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('timeout')), CHECK_TIMEOUT)
       ),
