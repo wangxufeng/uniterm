@@ -40,7 +40,6 @@
                       <span>{{ t('sidebar.filterAll') }}</span>
                     </span>
                   </el-dropdown-item>
-                  <el-dropdown-item divided v-if="availableTypes.length > 0" />
                   <el-dropdown-item
                     v-for="typeOpt in availableTypes"
                     :key="typeOpt.value"
@@ -296,21 +295,25 @@
       :style="menuStyle"
       @click.stop
     >
+      <!-- Terminal -->
       <div v-if="selectedConn && selectedConn.type === 'ssh'" class="menu-item" @click="doConnect">{{ t('sidebar.connectSSH') }}</div>
       <div v-if="selectedConn && selectedConn.type === 'telnet'" class="menu-item" @click="doConnect">{{ t('sidebar.connectTelnet') }}</div>
       <div v-if="selectedConn && selectedConn.type === 'mosh'" class="menu-item" @click="doConnect">{{ t('sidebar.connectMosh') }}</div>
       <div v-if="selectedConn && selectedConn.type === 'local'" class="menu-item" @click="doConnect">{{ t('sidebar.connectLocal') }}</div>
       <div v-if="selectedConn && selectedConn.type === 'serial'" class="menu-item" @click="emit('connectSerial')">{{ t('sidebar.connectSerial') }}</div>
+      <!-- File Transfer -->
       <div v-if="selectedConn && selectedConn.type === 'ssh'" class="menu-item" @click="doConnectSFTP">{{ t('sidebar.connectSftp') }}</div>
       <div v-if="selectedConn && selectedConn.type === 'ftp'" class="menu-item" @click="doConnectFTP">{{ t('sidebar.connectFtp') }}</div>
       <div v-if="selectedConn && selectedConn.type === 'smb'" class="menu-item" @click="doConnectSMB">{{ t('sidebar.connectSmb') }}</div>
-      <div v-if="selectedConn && selectedConn.type === 'webdav'" class="menu-item" @click="doConnectWebDAV">{{ t('sidebar.connectWebdav') }}</div>
       <div v-if="selectedConn && selectedConn.type === 's3'" class="menu-item" @click="doConnectS3">{{ t('sidebar.connectS3') }}</div>
-      <div v-if="selectedConn && selectedConn.type === 'ssh'" class="menu-item" @click="doConnectMonitor">{{ t('sidebar.connectMonitor') }}</div>
+      <div v-if="selectedConn && selectedConn.type === 'webdav'" class="menu-item" @click="doConnectWebDAV">{{ t('sidebar.connectWebdav') }}</div>
+      <!-- Remote Desktop -->
       <div v-if="selectedConn && selectedConn.type === 'rdp'" class="menu-item" @click="doConnectRDP">{{ t('sidebar.connectRDP') }}</div>
       <div v-if="selectedConn && selectedConn.type === 'vnc'" class="menu-item" @click="doConnectVNC">{{ t('sidebar.connectVNC') }}</div>
       <div v-if="selectedConn && selectedConn.type === 'spice'" class="menu-item" @click="doConnectSPICE">{{ t('sidebar.connectSPICE') }}</div>
+      <!-- Database & Monitor -->
       <div v-if="selectedConn && selectedConn.type === 'database'" class="menu-item" @click="doConnectDB">{{ t('db.connectDB') }}</div>
+      <div v-if="selectedConn && selectedConn.type === 'ssh'" class="menu-item" @click="doConnectMonitor">{{ t('sidebar.connectMonitor') }}</div>
       <div class="menu-divider" />
       <div class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doEdit()">{{ t('sidebar.edit') }}</div>
       <div class="menu-item" @click="doDuplicate">{{ t('sidebar.duplicate') }}</div>
@@ -513,6 +516,9 @@ const TYPE_LABELS: Record<string, string> = {
   local: 'Local',
   sftp: 'SFTP',
   ftp: 'FTP',
+  smb: 'SMB',
+  s3: 'S3',
+  webdav: 'WebDAV',
   monitor: 'Monitor',
   'database:mysql': 'MySQL',
   'database:postgres': 'PostgreSQL',
@@ -531,10 +537,10 @@ const availableTypes = computed<TypeOption[]>(() => {
       types.add(c.type)
     }
   }
-  return [...types].sort().map(value => ({
+  return [...types].map(value => ({
     value,
     label: TYPE_LABELS[value] || value
-  }))
+  })).sort((a, b) => a.label.localeCompare(b.label))
 })
 
 function matchTypeFilter(conn: ConnectionConfig, filter: string): boolean {

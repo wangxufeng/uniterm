@@ -16,7 +16,6 @@
             >
               {{ t('sidebar.filterAll') }}
             </el-dropdown-item>
-            <el-dropdown-item divided v-if="availableTypes.length > 0" />
             <el-dropdown-item
               v-for="typeOpt in availableTypes"
               :key="typeOpt.value"
@@ -245,18 +244,25 @@
       :style="contextMenuStyle"
       @click.stop
     >
+      <!-- Terminal -->
       <div v-if="contextMenuConfig && contextMenuConfig.type === 'ssh'" class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doConnect(contextMenuConfig, $event)">{{ t('sidebar.connectSSH') }}</div>
       <div v-if="contextMenuConfig && contextMenuConfig.type === 'telnet'" class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doConnect(contextMenuConfig, $event)">{{ t('sidebar.connectTelnet') }}</div>
       <div v-if="contextMenuConfig && contextMenuConfig.type === 'mosh'" class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doConnect(contextMenuConfig, $event)">{{ t('sidebar.connectMosh') }}</div>
       <div v-if="contextMenuConfig && contextMenuConfig.type === 'local'" class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doConnect(contextMenuConfig, $event)">{{ t('sidebar.connectLocal') }}</div>
       <div v-if="contextMenuConfig && contextMenuConfig.type === 'serial'" class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doConnectSerial(contextMenuConfig, $event)">{{ t('sidebar.connectSerial') }}</div>
+      <!-- File Transfer -->
       <div v-if="contextMenuConfig && contextMenuConfig.type === 'ssh'" class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doConnectSftp(contextMenuConfig)">{{ t('sidebar.connectSftp') }}</div>
-      <div v-if="contextMenuConfig && contextMenuConfig.type === 'ssh'" class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doConnectMonitor(contextMenuConfig)">{{ t('sidebar.connectMonitor') }}</div>
+      <div v-if="contextMenuConfig && contextMenuConfig.type === 'ftp'" class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doConnectFtp(contextMenuConfig)">{{ t('sidebar.connectFtp') }}</div>
+      <div v-if="contextMenuConfig && contextMenuConfig.type === 'smb'" class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doConnectSmb(contextMenuConfig)">{{ t('sidebar.connectSmb') }}</div>
+      <div v-if="contextMenuConfig && contextMenuConfig.type === 's3'" class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doConnectS3(contextMenuConfig)">{{ t('sidebar.connectS3') }}</div>
+      <div v-if="contextMenuConfig && contextMenuConfig.type === 'webdav'" class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doConnectWebdav(contextMenuConfig)">{{ t('sidebar.connectWebdav') }}</div>
+      <!-- Remote Desktop -->
       <div v-if="contextMenuConfig && contextMenuConfig.type === 'rdp'" class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doConnectRdp(contextMenuConfig)">{{ t('sidebar.connectRDP') }}</div>
       <div v-if="contextMenuConfig && contextMenuConfig.type === 'vnc'" class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doConnectVnc(contextMenuConfig)">{{ t('sidebar.connectVNC') }}</div>
       <div v-if="contextMenuConfig && contextMenuConfig.type === 'spice'" class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doConnectSpice(contextMenuConfig)">{{ t('sidebar.connectSPICE') }}</div>
+      <!-- Database & Monitor -->
       <div v-if="contextMenuConfig && contextMenuConfig.type === 'database'" class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doConnectDb(contextMenuConfig)">{{ t('db.connectDB') }}</div>
-      <div v-if="contextMenuConfig && contextMenuConfig.type === 'ftp'" class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doConnectFtp(contextMenuConfig)">{{ t('sidebar.connectFtp') }}</div>
+      <div v-if="contextMenuConfig && contextMenuConfig.type === 'ssh'" class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doConnectMonitor(contextMenuConfig)">{{ t('sidebar.connectMonitor') }}</div>
       <div class="menu-divider" />
       <div class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doEditConnection(contextMenuConfig)">{{ t('sidebar.edit') }}</div>
       <div class="menu-item" @click="doChangeGroupBulk">{{ t('conn.changeGroup') }}</div>
@@ -391,7 +397,7 @@ const searchInputRef = ref<HTMLInputElement>()
 
 const TYPE_LABELS: Record<string, string> = {
   ssh: 'SSH', telnet: 'Telnet', mosh: 'Mosh', rdp: 'RDP', vnc: 'VNC', spice: 'SPICE',
-  local: 'Local', sftp: 'SFTP', ftp: 'FTP', monitor: 'Monitor',
+  local: 'Local', sftp: 'SFTP', ftp: 'FTP', smb: 'SMB', s3: 'S3', webdav: 'WebDAV', monitor: 'Monitor',
   'database:mysql': 'MySQL', 'database:postgres': 'PostgreSQL', 'database:rqlite': 'rqlite',
   'database:oracle': 'Oracle', 'database:sqlserver': 'SQL Server', 'database:redis': 'Redis',
 }
@@ -405,10 +411,10 @@ const availableTypes = computed(() => {
       types.add(c.type)
     }
   }
-  return [...types].sort().map(value => ({
+  return [...types].map(value => ({
     value,
     label: TYPE_LABELS[value] || value
-  }))
+  })).sort((a, b) => a.label.localeCompare(b.label))
 })
 
 function matchTypeFilter(conn: ConnectionConfig, filter: string): boolean {
@@ -451,6 +457,7 @@ const recentConfigs = computed(() => {
   return recentConnectionIds.value
     .map(id => connectionStore.connections.find(c => c.id === id))
     .filter((c): c is ConnectionConfig => !!c)
+    .filter(c => matchTypeFilter(c, selectedTypeFilter.value))
     .filter(c => !query ||
       c.name.toLowerCase().includes(query) ||
       (c.host || '').toLowerCase().includes(query) ||
@@ -908,6 +915,9 @@ function doConnectVnc(config: ConnectionConfig) { closeContextMenu(); window.dis
 function doConnectSpice(config: ConnectionConfig) { closeContextMenu(); window.dispatchEvent(new CustomEvent('app:connect-spice', { detail: config })) }
 function doConnectDb(config: ConnectionConfig) { closeContextMenu(); window.dispatchEvent(new CustomEvent('app:connect-db', { detail: config })) }
 function doConnectFtp(config: ConnectionConfig) { closeContextMenu(); window.dispatchEvent(new CustomEvent('app:connect-ftp', { detail: config })) }
+function doConnectSmb(config: ConnectionConfig) { closeContextMenu(); window.dispatchEvent(new CustomEvent('app:connect-smb', { detail: config })) }
+function doConnectS3(config: ConnectionConfig) { closeContextMenu(); window.dispatchEvent(new CustomEvent('app:connect-s3', { detail: config })) }
+function doConnectWebdav(config: ConnectionConfig) { closeContextMenu(); window.dispatchEvent(new CustomEvent('app:connect-webdav', { detail: config })) }
 function doEditConnection(config: ConnectionConfig | null) {
   if (!config) return
   closeContextMenu()

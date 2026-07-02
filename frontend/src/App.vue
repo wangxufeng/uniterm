@@ -87,7 +87,7 @@
       </div>
       <AISidebar ref="aiSidebarRef" />
     </div>
-    <ConnectionForm v-model="showConnectionForm" :config="editConfig" :default-group-id="pendingGroupId" @save="onSaveOnly" @connect="(c: ConnectionConfig, ko?: boolean) => { editConfig = null; onConnect(c, ko) }" @cancel="editConfig = null" />
+    <ConnectionForm v-model="showConnectionForm" :edit-config="editConfig" :default-group-id="pendingGroupId" @save="onSaveOnly" @connect="(c: ConnectionConfig, ko?: boolean) => { editConfig = null; onConnect(c, ko) }" @cancel="editConfig = null" />
     <SerialConnectDialog v-model="showSerialDialog" @connect="(sid: string, portName: string, baudRate: number) => onConnectSerial(sid, portName, baudRate, serialKeepOpen)" />
     <!-- Change group dialog (from start tab context menu) -->
     <el-dialog v-model="showChangeGroupFromStart" :title="t('conn.changeGroup')" width="360px">
@@ -505,6 +505,15 @@ onMounted(async () => {
   }) as EventListener)
   window.addEventListener('app:connect-ftp', ((e: CustomEvent) => {
     const d = e.detail; const c = d?.config || d; if (c) { const prev = tabStore.activeTab; onConnectFtp(c, prev?.type === 'start' ? prev : undefined) }
+  }) as EventListener)
+  window.addEventListener('app:connect-smb', ((e: CustomEvent) => {
+    const d = e.detail; const c = d?.config || d; if (c) { const prev = tabStore.activeTab; onConnectSmb(c, prev?.type === 'start' ? prev : undefined) }
+  }) as EventListener)
+  window.addEventListener('app:connect-webdav', ((e: CustomEvent) => {
+    const d = e.detail; const c = d?.config || d; if (c) { const prev = tabStore.activeTab; onConnectWebdav(c, prev?.type === 'start' ? prev : undefined) }
+  }) as EventListener)
+  window.addEventListener('app:connect-s3', ((e: CustomEvent) => {
+    const d = e.detail; const c = d?.config || d; if (c) { const prev = tabStore.activeTab; onConnectS3(c, prev?.type === 'start' ? prev : undefined) }
   }) as EventListener)
 
 })

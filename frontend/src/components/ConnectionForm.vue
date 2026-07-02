@@ -45,8 +45,8 @@
             <el-radio-button label="ftp">FTP</el-radio-button>
             <el-radio-button label="ssh">SSH (SFTP)</el-radio-button>
             <el-radio-button label="smb">SMB</el-radio-button>
-            <el-radio-button label="webdav">WebDAV</el-radio-button>
             <el-radio-button label="s3">S3</el-radio-button>
+            <el-radio-button label="webdav">WebDAV</el-radio-button>
           </el-radio-group>
         </template>
         <template v-if="category === 'remote'">

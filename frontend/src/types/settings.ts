@@ -58,7 +58,7 @@ export interface KeyBinding {
   key: string
 }
 
-export type KeyboardSettings = Record<ShortcutAction, KeyBinding>
+export type KeyboardSettings = Partial<Record<ShortcutAction, KeyBinding>>
 
 export const SHORTCUT_LABELS: Record<ShortcutAction, string> = {
   nextTab: 'shortcut.nextTab',
@@ -87,7 +87,6 @@ export const DEFAULT_KEYBOARD: KeyboardSettings = {
   navigateNext: { ctrl: false, shift: false, alt: true, key: 'arrowright' },
   lockAI: { ctrl: true, shift: true, alt: false, key: 'l' },
   duplicateSession: { ctrl: true, shift: true, alt: false, key: 'd' },
-  openSettings: { ctrl: true, shift: true, alt: false, key: 'c' },
 }
 
 export interface SFTPBookmarks {
