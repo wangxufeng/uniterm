@@ -105,6 +105,6 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 )
 
-replace github.com/unixshells/mosh-go v0.5.2 => ./backend/mosh-go-local
+replace github.com/unixshells/mosh-go v0.5.2 => github.com/ys-ll/mosh-go v0.0.0-20260702130124-e17b92cd9dab
 
 replace github.com/rhnvrm/simples3 v0.11.1 => github.com/ys-ll/simples3 v0.0.0-20260702065557-1d8c6e314ba9
