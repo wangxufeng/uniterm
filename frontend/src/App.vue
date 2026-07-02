@@ -76,7 +76,7 @@
               @connect="onConnect"
               @new-connection="onNewConnectionFromStart"
               @local-terminal="createLocalTerminalWithShell"
-              @connect-serial="showSerialDialog = true"
+              @connect-serial="(keepOpen?: boolean) => { serialKeepOpen = keepOpen; showSerialDialog = true }"
               @close-self="(tabId: string) => closeTab(tabId)"
             />
           </KeepAlive>
@@ -85,7 +85,7 @@
       <AISidebar ref="aiSidebarRef" />
     </div>
     <ConnectionForm v-model="showConnectionForm" :default-group-id="pendingGroupId" @save="onSaveOnly" @connect="onConnect" />
-    <SerialConnectDialog v-model="showSerialDialog" @connect="onConnectSerial" />
+    <SerialConnectDialog v-model="showSerialDialog" @connect="(sid: string, portName: string, baudRate: number) => onConnectSerial(sid, portName, baudRate, serialKeepOpen)" />
     <CredentialPrompt
       v-model:visible="credentialVisible"
       :title="credentialTitle"
@@ -227,6 +227,7 @@ function RDPShowForOverlay() {
 
 const showConnectionForm = ref(false)
 const showSerialDialog = ref(false)
+const serialKeepOpen = ref(false)
 const sidebarVisible = ref(true)
 const sidebarRef = ref<any>(null)
 const aiSidebarRef = ref<any>(null)
@@ -703,7 +704,7 @@ function onSaveOnly(config: ConnectionConfig) {
   connectionStore.add(config)
 }
 
-async function onConnect(config: ConnectionConfig) {
+async function onConnect(config: ConnectionConfig, keepOpen?: boolean) {
   if (config.type === 'ftp') return onConnectFtp(config)
   if (config.type === 'rdp') return onConnectRDP(config)
   if (config.type === 'vnc') return onConnectVNC(config)
@@ -743,7 +744,7 @@ async function onConnect(config: ConnectionConfig) {
   const tab = tabStore.createTerminalTab(displayTitle, panel.id)
   panelStore.movePanelToTab(panel.id, tab.id)
   RecordRecentConnection(config.id)
-  if (prev?.type === 'start') closeTab(prev.id)
+  if (prev?.type === 'start' && !keepOpen) closeTab(prev.id)
 }
 
 function getShellLabel(path: string): string {
@@ -760,8 +761,8 @@ function getShellLabel(path: string): string {
   return path.replace(/\\/g, '/').split('/').pop() || 'Local'
 }
 
-async function createLocalTerminalWithShell(shellPath: string) {
-  await createLocalTerminal(shellPath)
+async function createLocalTerminalWithShell(shellPath: string, keepOpen?: boolean) {
+  await createLocalTerminal(shellPath, keepOpen)
 }
 
 const pendingGroupId = ref<string | undefined>(undefined)
@@ -783,7 +784,7 @@ function onTabDragStart(_e: DragEvent, _tabId: string) {
   // Data is set in TabItem
 }
 
-async function createLocalTerminal(shellPath?: string) {
+async function createLocalTerminal(shellPath?: string, keepOpen?: boolean) {
   const panel = panelStore.createPanel(null, 'local')
   const shellName = getShellLabel(shellPath)
   panel.title = shellName
@@ -809,7 +810,7 @@ async function createLocalTerminal(shellPath?: string) {
     const prev = tabStore.activeTab
     const tab = tabStore.createTerminalTab(shellName, panel.id)
     panelStore.movePanelToTab(panel.id, tab.id)
-    if (prev?.type === 'start') closeTab(prev.id)
+    if (prev?.type === 'start' && !keepOpen) closeTab(prev.id)
   } catch (e) {
     console.error('Failed to create local terminal:', e)
     panelStore.removePanel(panel.id)
@@ -1000,7 +1001,7 @@ async function onConnectDB(config: ConnectionConfig) {
   }
 }
 
-async function onConnectSerial(sessionId: string, portName: string, baudRate: number) {
+async function onConnectSerial(sessionId: string, portName: string, baudRate: number, keepOpen?: boolean) {
   const config: ConnectionConfig = {
     id: '',
     name: `${portName} (${baudRate})`,
@@ -1018,7 +1019,7 @@ async function onConnectSerial(sessionId: string, portName: string, baudRate: nu
   const tab = tabStore.createTerminalTab(panel.title, panel.id)
   panelStore.movePanelToTab(panel.id, tab.id)
   RecordRecentConnection(config.id)
-  if (prev?.type === 'start') closeTab(prev.id)
+  if (prev?.type === 'start' && !keepOpen) closeTab(prev.id)
 }
 
 // Show/hide native RDP window on tab switch.

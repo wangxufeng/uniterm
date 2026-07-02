@@ -66,17 +66,6 @@
             <el-dropdown-menu>
               <el-dropdown-item command="new-connection">{{ t('header.newConnection') }}</el-dropdown-item>
               <el-dropdown-item command="new-group">{{ t('conn.newGroupTitle') }}</el-dropdown-item>
-              <div
-                v-if="settingsStore.availableShells.length > 0"
-                class="submenu-wrapper"
-                @mouseenter="showShellSubmenu = true"
-                @mouseleave="showShellSubmenu = false"
-              >
-                <el-dropdown-item class="submenu-trigger">
-                  {{ t('conn.localTerminal') }} <ChevronRight :size="12" />
-                </el-dropdown-item>
-              </div>
-              <el-dropdown-item command="new-serial">{{ t('sidebar.connectSerial') }}</el-dropdown-item>
             </el-dropdown-menu>
           </template>
         </el-dropdown>
@@ -448,7 +437,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
 import { X, ChevronRight, ChevronDown, Filter, Check, Network, Zap, Clock, Plus, Palette, SquareTerminal, FolderUp, Monitor, MonitorCloud, Database, Activity, Laptop, Cable } from '@lucide/vue'
-import { ElMessageBox } from 'element-plus'
+import { ElMessageBox, ElMessage } from 'element-plus'
 import { useConnectionStore } from '../stores/connectionStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useI18n } from '../i18n'
@@ -1072,7 +1061,10 @@ function doNewConnInGroup() {
 async function confirmNewGroup() {
   const name = newGroupName.value.trim()
   if (!name) return
-  if (connectionStore.groups.some(g => g.name === name)) return
+  if (connectionStore.groups.some(g => g.name === name)) {
+    ElMessage.warning(t('conn.groupNameDuplicate'))
+    return
+  }
   await connectionStore.addGroup(name)
   showNewGroupDialog.value = false
 }
@@ -1118,7 +1110,10 @@ function confirmChangeGroup() {
 async function confirmChangeNewGroup() {
   const name = changeNewGroupName.value.trim()
   if (!name) return
-  if (connectionStore.groups.some(g => g.name === name)) return
+  if (connectionStore.groups.some(g => g.name === name)) {
+    ElMessage.warning(t('conn.groupNameDuplicate'))
+    return
+  }
   const group = await connectionStore.addGroup(name)
   const ids = getSelectedConnectionIds()
   connectionStore.setConnectionsGroup(ids, group.id)

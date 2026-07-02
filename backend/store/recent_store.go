@@ -8,7 +8,7 @@ import (
 )
 
 const recentFileName = "recent.json"
-const maxRecent = 10
+const maxRecent = 20
 
 type RecentStore struct {
 	filePath string

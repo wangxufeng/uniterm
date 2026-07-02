@@ -64,6 +64,7 @@
   "conn.newGroup": "+ Nuevo Grupo",
   "conn.newGroupTitle": "Nuevo Grupo",
   "conn.groupName": "Nombre del Grupo",
+  "conn.groupNameDuplicate": "El nombre del grupo ya existe",
   "conn.groupNamePlaceholder": "Introduzca el nombre del grupo...",
   "conn.deleteGroupTitle": "Eliminar Grupo",
   "conn.deleteGroupPrompt": "El grupo \"{name}\" tiene {count} conexión(es). Elija una acción:",

@@ -64,6 +64,7 @@
   "conn.newGroup": "+ Новая группа",
   "conn.newGroupTitle": "Новая группа",
   "conn.groupName": "Имя группы",
+  "conn.groupNameDuplicate": "Имя группы уже существует",
   "conn.groupNamePlaceholder": "Введите имя группы...",
   "conn.deleteGroupTitle": "Удалить группу",
   "conn.deleteGroupPrompt": "Группа \"{name}\" содержит {count} подключений. Выберите действие:",

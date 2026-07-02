@@ -30,13 +30,13 @@ func TestRecentStore_Record_TrimsToMax(t *testing.T) {
 	dir := t.TempDir()
 	s := NewRecentStore(dir)
 
-	for i := 0; i < 15; i++ {
+	for i := 0; i < 25; i++ {
 		s.Record(string(rune('a' + i)))
 	}
 
 	ids := s.GetAll()
-	if len(ids) != 10 {
-		t.Fatalf("expected 10 ids (maxRecent), got %d", len(ids))
+	if len(ids) != 20 {
+		t.Fatalf("expected 20 ids (maxRecent), got %d", len(ids))
 	}
 }
 

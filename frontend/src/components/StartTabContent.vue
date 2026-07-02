@@ -53,7 +53,7 @@
             <el-dropdown-item
               v-for="sh in settingsStore.availableShells"
               :key="sh"
-              @click="emit('local-terminal', sh)"
+              @click="emit('local-terminal', sh, $event.ctrlKey || $event.metaKey)"
             >
               {{ getShellLabel(sh) }}
             </el-dropdown-item>
@@ -63,7 +63,7 @@
           </el-dropdown-menu>
         </template>
       </el-dropdown>
-      <button class="start-action-btn" @click="emit('connect-serial')">
+      <button class="start-action-btn" @click="emit('connect-serial', $event.ctrlKey || $event.metaKey)">
         <el-icon><Cable :size="14" /></el-icon>
         {{ t('sidebar.connectSerial') }}
       </button>
@@ -88,7 +88,7 @@
             class="start-card"
             :class="{ focused: isCardFocused('recent:' + config.id) }"
             @click="onCardClick(config, 'recent:')"
-            @dblclick="onCardDblClick(config)"
+            @dblclick="onCardDblClick(config, $event)"
             @contextmenu.prevent="onContextMenu($event, config)"
           >
             <div class="start-card-top">
@@ -158,7 +158,7 @@
           class="start-card"
           :class="{ focused: isCardFocused('conn:' + config.id) }"
           @click="onCardClick(config)"
-          @dblclick="onCardDblClick(config)"
+          @dblclick="onCardDblClick(config, $event)"
           @contextmenu.prevent="onContextMenu($event, config)"
         >
           <div class="start-card-top">
@@ -191,7 +191,7 @@
           class="start-card"
           :class="{ focused: isCardFocused('conn:' + config.id) }"
           @click="onCardClick(config)"
-          @dblclick="onCardDblClick(config)"
+          @dblclick="onCardDblClick(config, $event)"
 	          @contextmenu.prevent="onContextMenu($event, config)"
         >
           <div class="start-card-top">
@@ -245,11 +245,11 @@
       :style="contextMenuStyle"
       @click.stop
     >
-      <div v-if="contextMenuConfig && contextMenuConfig.type === 'ssh'" class="menu-item" @click="doConnect(contextMenuConfig)">{{ t('sidebar.connectSSH') }}</div>
-      <div v-if="contextMenuConfig && contextMenuConfig.type === 'telnet'" class="menu-item" @click="doConnect(contextMenuConfig)">{{ t('sidebar.connectTelnet') }}</div>
-      <div v-if="contextMenuConfig && contextMenuConfig.type === 'mosh'" class="menu-item" @click="doConnect(contextMenuConfig)">{{ t('sidebar.connectMosh') }}</div>
-      <div v-if="contextMenuConfig && contextMenuConfig.type === 'local'" class="menu-item" @click="doConnect(contextMenuConfig)">{{ t('sidebar.connectLocal') }}</div>
-      <div v-if="contextMenuConfig && contextMenuConfig.type === 'serial'" class="menu-item" @click="doConnectSerial(contextMenuConfig)">{{ t('sidebar.connectSerial') }}</div>
+      <div v-if="contextMenuConfig && contextMenuConfig.type === 'ssh'" class="menu-item" @click="doConnect(contextMenuConfig, $event)">{{ t('sidebar.connectSSH') }}</div>
+      <div v-if="contextMenuConfig && contextMenuConfig.type === 'telnet'" class="menu-item" @click="doConnect(contextMenuConfig, $event)">{{ t('sidebar.connectTelnet') }}</div>
+      <div v-if="contextMenuConfig && contextMenuConfig.type === 'mosh'" class="menu-item" @click="doConnect(contextMenuConfig, $event)">{{ t('sidebar.connectMosh') }}</div>
+      <div v-if="contextMenuConfig && contextMenuConfig.type === 'local'" class="menu-item" @click="doConnect(contextMenuConfig, $event)">{{ t('sidebar.connectLocal') }}</div>
+      <div v-if="contextMenuConfig && contextMenuConfig.type === 'serial'" class="menu-item" @click="doConnectSerial(contextMenuConfig, $event)">{{ t('sidebar.connectSerial') }}</div>
       <div v-if="contextMenuConfig && contextMenuConfig.type === 'ssh'" class="menu-item" @click="doConnectSftp(contextMenuConfig)">{{ t('sidebar.connectSftp') }}</div>
       <div v-if="contextMenuConfig && contextMenuConfig.type === 'ssh'" class="menu-item" @click="doConnectMonitor(contextMenuConfig)">{{ t('sidebar.connectMonitor') }}</div>
       <div v-if="contextMenuConfig && contextMenuConfig.type === 'rdp'" class="menu-item" @click="doConnectRdp(contextMenuConfig)">{{ t('sidebar.connectRDP') }}</div>
@@ -284,14 +284,24 @@
         <el-button type="primary" @click="doAddGroup">{{ t('conn.newGroupTitle') }}</el-button>
       </template>
     </el-dialog>
+
+    <!-- Delete group dialog -->
+    <el-dialog v-model="showDeleteGroupDialog" :title="t('conn.deleteGroupTitle')" width="450px">
+      <p>{{ deleteGroupPromptText }}</p>
+      <template #footer>
+        <el-button @click="showDeleteGroupDialog = false">{{ t('conn.deleteGroupCancel') }}</el-button>
+        <el-button type="warning" @click="confirmDeleteGroup('move-out')">{{ t('conn.deleteGroupMoveOut') }}</el-button>
+        <el-button type="danger" @click="confirmDeleteGroup('delete-connections')">{{ t('conn.deleteGroupDeleteAll') }}</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
-import { ElMessageBox } from 'element-plus'
+import { ElMessageBox, ElMessage } from 'element-plus'
 import type { StartTab } from '../types/workspace'
-import type { ConnectionConfig } from '../types/session'
+import type { ConnectionConfig, ConnectionGroup } from '../types/session'
 import { useConnectionStore } from '../stores/connectionStore'
 import { useTabStore } from '../stores/tabStore'
 import { useSettingsStore } from '../stores/settingsStore'
@@ -304,10 +314,10 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  connect: [config: ConnectionConfig]
+  connect: [config: ConnectionConfig, keepOpen?: boolean]
   'new-connection': [payload?: { host?: string; groupId?: string }]
-  'local-terminal': [shellPath: string]
-  'connect-serial': []
+  'local-terminal': [shellPath: string, keepOpen?: boolean]
+  'connect-serial': [keepOpen?: boolean]
   'close-self': [tabId: string]
 }>()
 
@@ -467,8 +477,8 @@ function onQuickClick() {
   }
 }
 
-function onCardDblClick(config: ConnectionConfig) {
-  emit('connect', config)
+function onCardDblClick(config: ConnectionConfig, e?: { ctrlKey?: boolean; metaKey?: boolean }) {
+  emit('connect', config, e ? !!(e.ctrlKey || e.metaKey) : false)
 }
 
 function enterGroup(groupId: string) {
@@ -577,6 +587,8 @@ function onSearchKeydown(e: KeyboardEvent) {
 }
 
 function onKeydown(e: KeyboardEvent) {
+  // Don't handle keyboard navigation when a dialog is open
+  if (showNewGroupDialog.value || showDeleteGroupDialog.value) return
   // Only handle when this component is mounted and this tab is active
   if (!startTabRef.value) return
   if (tabStore.activeTabId !== props.tab.id) return
@@ -667,7 +679,7 @@ function onKeydown(e: KeyboardEvent) {
     const item = focusableItems.value[focusedCardIndex.value]
     if (!item) return
     if (item.kind === 'recent' || item.kind === 'connection') {
-      onCardDblClick(item.config)
+      onCardDblClick(item.config, e)
     } else if (item.kind === 'group') {
       enterGroup(item.groupId)
     } else if (item.kind === 'quick') {
@@ -682,6 +694,7 @@ const contextMenuStyle = ref<Record<string, string>>({})
 const contextMenuConfig = ref<ConnectionConfig | null>(null)
 
 function onContextMenu(e: MouseEvent, config: ConnectionConfig) {
+  closeContextMenu()
   contextMenuConfig.value = config
   contextMenuStyle.value = {
     position: 'fixed',
@@ -724,8 +737,13 @@ const showNewGroupDialog = ref(false)
 const newGroupDialogName = ref('')
 
 async function doAddGroup() {
-  if (!newGroupDialogName.value.trim()) return
-  await connectionStore.addGroup(newGroupDialogName.value.trim())
+  const name = newGroupDialogName.value.trim()
+  if (!name) return
+  if (connectionStore.groups.some(g => g.name === name)) {
+    ElMessage.warning(t('conn.groupNameDuplicate'))
+    return
+  }
+  await connectionStore.addGroup(name)
   newGroupDialogName.value = ''
   showNewGroupDialog.value = false
 }
@@ -733,14 +751,31 @@ async function doAddGroup() {
 async function doDeleteGroup() {
   if (!groupContextTarget.value) return
   closeContextMenu()
-  try {
-    await ElMessageBox.confirm(
-      `Delete group "${groupContextTarget.value.name}" and all its connections?`,
-      '',
-      { confirmButtonText: t('sidebar.delete'), cancelButtonText: 'Cancel', type: 'warning' }
-    )
-    connectionStore.deleteGroup(groupContextTarget.value.id, 'delete-connections')
-  } catch { /* cancelled */ }
+  const g = groupContextTarget.value
+  const count = connectionStore.connections.filter(c => c.groupId === g.id).length
+  if (count === 0) {
+    await connectionStore.deleteGroup(g.id, 'move-out')
+    return
+  }
+  deleteGroupTarget.value = g
+  showDeleteGroupDialog.value = true
+}
+
+const showDeleteGroupDialog = ref(false)
+const deleteGroupTarget = ref<ConnectionGroup | null>(null)
+const deleteGroupPromptText = computed(() => {
+  const g = deleteGroupTarget.value
+  if (!g) return ''
+  const count = connectionStore.connections.filter(c => c.groupId === g.id).length
+  return t('conn.deleteGroupPrompt', { name: g.name, count })
+})
+
+async function confirmDeleteGroup(action: 'delete-connections' | 'move-out') {
+  if (deleteGroupTarget.value) {
+    await connectionStore.deleteGroup(deleteGroupTarget.value.id, action)
+  }
+  showDeleteGroupDialog.value = false
+  deleteGroupTarget.value = null
 }
 
 function onDocumentClick() {
@@ -772,8 +807,8 @@ onUnmounted(() => {
 })
 
 // Context menu actions
-function doConnect(config: ConnectionConfig) { closeContextMenu(); emit('connect', config) }
-function doConnectSerial(_config: ConnectionConfig) { closeContextMenu(); emit('connect-serial') }
+function doConnect(config: ConnectionConfig, e: MouseEvent) { closeContextMenu(); emit('connect', config, e.ctrlKey || e.metaKey) }
+function doConnectSerial(_config: ConnectionConfig, e: MouseEvent) { closeContextMenu(); emit('connect-serial', e.ctrlKey || e.metaKey) }
 function doConnectSftp(config: ConnectionConfig) { closeContextMenu(); window.dispatchEvent(new CustomEvent('app:connect-sftp', { detail: config })) }
 function doConnectMonitor(config: ConnectionConfig) { closeContextMenu(); window.dispatchEvent(new CustomEvent('app:connect-monitor', { detail: config })) }
 function doConnectRdp(config: ConnectionConfig) { closeContextMenu(); window.dispatchEvent(new CustomEvent('app:connect-rdp', { detail: config })) }

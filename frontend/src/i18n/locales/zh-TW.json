@@ -64,6 +64,7 @@
   "conn.newGroup": "+ 新增分組",
   "conn.newGroupTitle": "新增分組",
   "conn.groupName": "分組名稱",
+  "conn.groupNameDuplicate": "分組名稱已存在",
   "conn.groupNamePlaceholder": "輸入分組名稱...",
   "conn.deleteGroupTitle": "刪除分組",
   "conn.deleteGroupPrompt": "分組 \"{name}\" 下有 {count} 個連線，請選擇：",

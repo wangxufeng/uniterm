@@ -64,6 +64,7 @@
   "conn.newGroup": "+ 新規グループ",
   "conn.newGroupTitle": "新規グループ",
   "conn.groupName": "グループ名",
+  "conn.groupNameDuplicate": "グループ名は既に存在します",
   "conn.groupNamePlaceholder": "グループ名を入力...",
   "conn.deleteGroupTitle": "グループを削除",
   "conn.deleteGroupPrompt": "グループ「{name}」には接続が {count} 件あります。操作を選択してください:",

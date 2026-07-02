@@ -64,6 +64,7 @@
   "conn.newGroup": "+ 새 그룹",
   "conn.newGroupTitle": "새 그룹",
   "conn.groupName": "그룹 이름",
+  "conn.groupNameDuplicate": "그룹 이름이 이미 존재합니다",
   "conn.groupNamePlaceholder": "그룹 이름을 입력하세요...",
   "conn.deleteGroupTitle": "그룹 삭제",
   "conn.deleteGroupPrompt": "그룹 \"{name}\"에 연결이 {count}개 있습니다. 어떻게 할까요?",
