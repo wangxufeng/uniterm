@@ -62,6 +62,12 @@ export const useConnectionStore = defineStore('connection', () => {
     await save()
   }
 
+  async function removeMany(ids: string[]) {
+    const set = new Set(ids)
+    connections.value = connections.value.filter(c => !set.has(c.id))
+    await save()
+  }
+
   // ── Group CRUD ──
 
   function generateGroupId(): string {
@@ -160,6 +166,7 @@ export const useConnectionStore = defineStore('connection', () => {
     add,
     update,
     remove,
+    removeMany,
     addGroup,
     renameGroup,
     deleteGroup,

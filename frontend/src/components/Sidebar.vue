@@ -1029,9 +1029,7 @@ async function doDelete() {
   } catch {
     return
   }
-  for (const id of ids) {
-    connectionStore.remove(id)
-  }
+  connectionStore.removeMany(ids)
   selectedIds.value = new Set()
 }
 

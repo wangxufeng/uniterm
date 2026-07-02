@@ -67,6 +67,58 @@ export const useTabStore = defineStore('tab', () => {
     return tab
   }
 
+  function createTerminalTabAt(name: string, panelId: string, index: number): TerminalTab {
+    const tab: TerminalTab = {
+      type: 'terminal',
+      id: genId('term-tab'),
+      panelId,
+      name
+    }
+    tabState.tabs.splice(index, 0, tab)
+    tabState.activeTabId = tab.id
+    return tab
+  }
+
+  // Remove the start tab at startTabId and create a terminal tab in its
+  // position — atomic replacement that avoids flicker and auto-create races.
+  function replaceStartTab(startTabId: string, name: string, panelId: string): TerminalTab {
+    const startIdx = tabState.tabs.findIndex(t => t.id === startTabId)
+    if (startIdx === -1) {
+      return createTerminalTab(name, panelId)
+    }
+    tabState.tabs.splice(startIdx, 1)
+    return createTerminalTabAt(name, panelId, startIdx)
+  }
+
+  // Generic replacement: remove start tab and insert any tab type at its position.
+  function replaceStartWithTab(startTabId: string, tab: Tab): Tab {
+    const startIdx = tabState.tabs.findIndex(t => t.id === startTabId)
+    if (startIdx === -1) {
+      tabState.tabs.push(tab)
+    } else {
+      tabState.tabs.splice(startIdx, 1, tab)
+    }
+    tabState.activeTabId = tab.id
+    return tab
+  }
+
+  // Close a start tab atomically and move a newly-created tab into its
+  // position. Callers should create the new tab first, then call this.
+  function closeStartAndReposition(startTabId: string, newTabId: string) {
+    const startIdx = tabState.tabs.findIndex(t => t.id === startTabId)
+    if (startIdx === -1) return
+    const newIdx = tabState.tabs.findIndex(t => t.id === newTabId)
+    if (newIdx === -1) return
+    // Remove new tab from its current position
+    const [moved] = tabState.tabs.splice(newIdx, 1)
+    // Calculate target: startIdx if new was after start, else startIdx-1
+    const target = newIdx > startIdx ? startIdx : startIdx
+    tabState.tabs.splice(target, 0, moved)
+    // Now remove start tab (its index may have shifted)
+    const curStartIdx = tabState.tabs.findIndex(t => t.id === startTabId)
+    if (curStartIdx >= 0) tabState.tabs.splice(curStartIdx, 1)
+  }
+
   function createSettingsTab(name: string, panelId: string): SettingsTab {
     const tab: SettingsTab = {
       type: 'settings',
@@ -544,6 +596,9 @@ export const useTabStore = defineStore('tab', () => {
     activeTab,
     aiLockedPanelId,
     createTerminalTab,
+    createTerminalTabAt,
+    replaceStartTab,
+    replaceStartWithTab,
     createSettingsTab,
     createSFPTab,
     createFtpTab,

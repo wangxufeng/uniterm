@@ -86,10 +86,10 @@
             v-for="config in recentConfigs"
             :key="config.id"
             class="start-card"
-            :class="{ focused: isCardFocused('recent:' + config.id) }"
-            @click="onCardClick(config, 'recent:')"
+            :class="{ focused: isCardFocused('recent:' + config.id), selected: selectedIds.has('recent:' + config.id) }"
+            @click="onCardClick(config, $event, 'recent:')"
             @dblclick="onCardDblClick(config, $event)"
-            @contextmenu.prevent="onContextMenu($event, config)"
+            @contextmenu.prevent="onContextMenu($event, config, 'recent:')"
           >
             <div class="start-card-top">
               <div class="start-card-icon" :class="config.type">
@@ -156,8 +156,8 @@
           v-for="{ config } in filteredConnections"
           :key="config.id"
           class="start-card"
-          :class="{ focused: isCardFocused('conn:' + config.id) }"
-          @click="onCardClick(config)"
+          :class="{ focused: isCardFocused('conn:' + config.id), selected: selectedIds.has('conn:' + config.id) }"
+          @click="onCardClick(config, $event)"
           @dblclick="onCardDblClick(config, $event)"
           @contextmenu.prevent="onContextMenu($event, config)"
         >
@@ -189,8 +189,8 @@
           v-for="{ config } in filteredConnections"
           :key="config.id"
           class="start-card"
-          :class="{ focused: isCardFocused('conn:' + config.id) }"
-          @click="onCardClick(config)"
+          :class="{ focused: isCardFocused('conn:' + config.id), selected: selectedIds.has('conn:' + config.id) }"
+          @click="onCardClick(config, $event)"
           @dblclick="onCardDblClick(config, $event)"
 	          @contextmenu.prevent="onContextMenu($event, config)"
         >
@@ -245,22 +245,24 @@
       :style="contextMenuStyle"
       @click.stop
     >
-      <div v-if="contextMenuConfig && contextMenuConfig.type === 'ssh'" class="menu-item" @click="doConnect(contextMenuConfig, $event)">{{ t('sidebar.connectSSH') }}</div>
-      <div v-if="contextMenuConfig && contextMenuConfig.type === 'telnet'" class="menu-item" @click="doConnect(contextMenuConfig, $event)">{{ t('sidebar.connectTelnet') }}</div>
-      <div v-if="contextMenuConfig && contextMenuConfig.type === 'mosh'" class="menu-item" @click="doConnect(contextMenuConfig, $event)">{{ t('sidebar.connectMosh') }}</div>
-      <div v-if="contextMenuConfig && contextMenuConfig.type === 'local'" class="menu-item" @click="doConnect(contextMenuConfig, $event)">{{ t('sidebar.connectLocal') }}</div>
-      <div v-if="contextMenuConfig && contextMenuConfig.type === 'serial'" class="menu-item" @click="doConnectSerial(contextMenuConfig, $event)">{{ t('sidebar.connectSerial') }}</div>
-      <div v-if="contextMenuConfig && contextMenuConfig.type === 'ssh'" class="menu-item" @click="doConnectSftp(contextMenuConfig)">{{ t('sidebar.connectSftp') }}</div>
-      <div v-if="contextMenuConfig && contextMenuConfig.type === 'ssh'" class="menu-item" @click="doConnectMonitor(contextMenuConfig)">{{ t('sidebar.connectMonitor') }}</div>
-      <div v-if="contextMenuConfig && contextMenuConfig.type === 'rdp'" class="menu-item" @click="doConnectRdp(contextMenuConfig)">{{ t('sidebar.connectRDP') }}</div>
-      <div v-if="contextMenuConfig && contextMenuConfig.type === 'vnc'" class="menu-item" @click="doConnectVnc(contextMenuConfig)">{{ t('sidebar.connectVNC') }}</div>
-      <div v-if="contextMenuConfig && contextMenuConfig.type === 'spice'" class="menu-item" @click="doConnectSpice(contextMenuConfig)">{{ t('sidebar.connectSPICE') }}</div>
-      <div v-if="contextMenuConfig && contextMenuConfig.type === 'database'" class="menu-item" @click="doConnectDb(contextMenuConfig)">{{ t('db.connectDB') }}</div>
-      <div v-if="contextMenuConfig && contextMenuConfig.type === 'ftp'" class="menu-item" @click="doConnectFtp(contextMenuConfig)">{{ t('sidebar.connectFtp') }}</div>
+      <div v-if="contextMenuConfig && contextMenuConfig.type === 'ssh'" class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doConnect(contextMenuConfig, $event)">{{ t('sidebar.connectSSH') }}</div>
+      <div v-if="contextMenuConfig && contextMenuConfig.type === 'telnet'" class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doConnect(contextMenuConfig, $event)">{{ t('sidebar.connectTelnet') }}</div>
+      <div v-if="contextMenuConfig && contextMenuConfig.type === 'mosh'" class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doConnect(contextMenuConfig, $event)">{{ t('sidebar.connectMosh') }}</div>
+      <div v-if="contextMenuConfig && contextMenuConfig.type === 'local'" class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doConnect(contextMenuConfig, $event)">{{ t('sidebar.connectLocal') }}</div>
+      <div v-if="contextMenuConfig && contextMenuConfig.type === 'serial'" class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doConnectSerial(contextMenuConfig, $event)">{{ t('sidebar.connectSerial') }}</div>
+      <div v-if="contextMenuConfig && contextMenuConfig.type === 'ssh'" class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doConnectSftp(contextMenuConfig)">{{ t('sidebar.connectSftp') }}</div>
+      <div v-if="contextMenuConfig && contextMenuConfig.type === 'ssh'" class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doConnectMonitor(contextMenuConfig)">{{ t('sidebar.connectMonitor') }}</div>
+      <div v-if="contextMenuConfig && contextMenuConfig.type === 'rdp'" class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doConnectRdp(contextMenuConfig)">{{ t('sidebar.connectRDP') }}</div>
+      <div v-if="contextMenuConfig && contextMenuConfig.type === 'vnc'" class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doConnectVnc(contextMenuConfig)">{{ t('sidebar.connectVNC') }}</div>
+      <div v-if="contextMenuConfig && contextMenuConfig.type === 'spice'" class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doConnectSpice(contextMenuConfig)">{{ t('sidebar.connectSPICE') }}</div>
+      <div v-if="contextMenuConfig && contextMenuConfig.type === 'database'" class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doConnectDb(contextMenuConfig)">{{ t('db.connectDB') }}</div>
+      <div v-if="contextMenuConfig && contextMenuConfig.type === 'ftp'" class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doConnectFtp(contextMenuConfig)">{{ t('sidebar.connectFtp') }}</div>
       <div class="menu-divider" />
-      <div class="menu-item" @click="doDuplicate(contextMenuConfig)">{{ t('sidebar.duplicate') }}</div>
+      <div class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doEditConnection(contextMenuConfig)">{{ t('sidebar.edit') }}</div>
+      <div class="menu-item" @click="doChangeGroupBulk">{{ t('conn.changeGroup') }}</div>
+      <div class="menu-item" :class="{ disabled: selectedIds.size > 1 }" @click="selectedIds.size <= 1 && doDuplicate(contextMenuConfig)">{{ t('sidebar.duplicate') }}</div>
       <div class="menu-divider" />
-      <div class="menu-item danger" @click="doDelete(contextMenuConfig)">{{ t('sidebar.delete') }}</div>
+      <div class="menu-item danger" @click="doDeleteBulk">{{ t('sidebar.delete') }}</div>
     </div>
 
     <!-- Group context menu -->
@@ -319,6 +321,9 @@ const emit = defineEmits<{
   'local-terminal': [shellPath: string, keepOpen?: boolean]
   'connect-serial': [keepOpen?: boolean]
   'close-self': [tabId: string]
+  'edit-connection': [config: ConnectionConfig]
+  'change-group': [config: ConnectionConfig]
+  'change-group-ids': [ids: string[]]
 }>()
 
 const { t } = useI18n()
@@ -335,6 +340,46 @@ function getCardSubtitle(config: ConnectionConfig): string {
       ? `${config.user}@${config.host}:${config.port}`
       : `${config.host}:${config.port}`
   return typeLabel + ' ' + detail
+}
+
+// ── Multi-select ──
+// Card keys: each card gets a unique key = prefix + config.id.
+// "recent:" prefix for recent-connection cards, "conn:" for all others.
+// This way the same connection appearing in both sections has two
+// independently selectable cards.
+const selectedIds = ref<Set<string>>(new Set())
+const lastClickId = ref<string | null>(null)
+
+function getAllVisibleIds(): string[] {
+  const ids: string[] = []
+  if (props.tab.viewMode === 'home') {
+    for (const c of recentConfigs.value) ids.push('recent:' + c.id)
+  }
+  for (const { config } of filteredConnections.value) ids.push('conn:' + config.id)
+  return ids
+}
+
+function cardKeyToId(key: string): string {
+  const idx = key.indexOf(':')
+  return idx >= 0 ? key.slice(idx + 1) : key
+}
+
+function getSelectedConnectionIds(): string[] {
+  if (selectedIds.value.size > 0) {
+    // Deduplicate by config ID (one connection may be selected via multiple cards)
+    const seen = new Set<string>()
+    const ids: string[] = []
+    for (const key of selectedIds.value) {
+      const id = cardKeyToId(key)
+      if (!seen.has(id)) {
+        seen.add(id)
+        ids.push(id)
+      }
+    }
+    return ids
+  }
+  if (contextMenuConfig.value) return [contextMenuConfig.value.id]
+  return []
 }
 
 // ── Search & filter ──
@@ -400,9 +445,14 @@ async function loadRecent() {
 loadRecent()
 
 const recentConfigs = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase()
   return recentConnectionIds.value
     .map(id => connectionStore.connections.find(c => c.id === id))
-    .filter(Boolean) as ConnectionConfig[]
+    .filter((c): c is ConnectionConfig => !!c)
+    .filter(c => !query ||
+      c.name.toLowerCase().includes(query) ||
+      (c.host || '').toLowerCase().includes(query) ||
+      c.type.toLowerCase().includes(query))
 })
 
 // ── Filtered connections ──
@@ -451,7 +501,30 @@ function getGroupName(groupId: string): string {
 }
 
 // ── Navigation ──
-function onCardClick(config: ConnectionConfig, prefix = 'conn:') {
+function onCardClick(config: ConnectionConfig, e: MouseEvent, prefix = 'conn:') {
+  const key = prefix + config.id
+  if (e.shiftKey && lastClickId.value) {
+    const ids = getAllVisibleIds()
+    const anchorIdx = ids.indexOf(lastClickId.value)
+    const currentIdx = ids.indexOf(key)
+    if (anchorIdx >= 0 && currentIdx >= 0) {
+      const [start, end] = anchorIdx < currentIdx ? [anchorIdx, currentIdx] : [currentIdx, anchorIdx]
+      const set = new Set<string>()
+      for (let i = start; i <= end; i++) set.add(ids[i])
+      selectedIds.value = set
+    }
+  } else if (e.ctrlKey || e.metaKey) {
+    if (selectedIds.value.has(key)) {
+      selectedIds.value.delete(key)
+    } else {
+      selectedIds.value.add(key)
+    }
+    selectedIds.value = new Set(selectedIds.value)
+    lastClickId.value = key
+  } else {
+    selectedIds.value = new Set([key])
+    lastClickId.value = key
+  }
   const idx = focusableIndexMap.value.get(prefix + config.id)
   if (idx !== undefined) {
     focusedCardIndex.value = idx
@@ -486,7 +559,6 @@ function enterGroup(groupId: string) {
   props.tab.groupId = groupId
   focusedCardIndex.value = 0
   focusInGrid.value = true
-  searchQuery.value = ''
 }
 
 function goHome() {
@@ -676,14 +748,24 @@ function onKeydown(e: KeyboardEvent) {
     }
   } else if (e.key === 'Enter') {
     e.preventDefault()
-    const item = focusableItems.value[focusedCardIndex.value]
-    if (!item) return
-    if (item.kind === 'recent' || item.kind === 'connection') {
-      onCardDblClick(item.config, e)
-    } else if (item.kind === 'group') {
-      enterGroup(item.groupId)
-    } else if (item.kind === 'quick') {
-      emit('new-connection', { host: searchQuery.value.trim() })
+    const ids = getSelectedConnectionIds()
+    if (ids.length > 1) {
+      // Bulk connect: open all selected connections
+      const configs = ids.map(id => connectionStore.connections.find(c => c.id === id)).filter(Boolean) as ConnectionConfig[]
+      for (const c of configs) {
+        emit('connect', c, e.ctrlKey || e.metaKey)
+      }
+      selectedIds.value = new Set()
+    } else {
+      const item = focusableItems.value[focusedCardIndex.value]
+      if (!item) return
+      if (item.kind === 'recent' || item.kind === 'connection') {
+        onCardDblClick(item.config, e)
+      } else if (item.kind === 'group') {
+        enterGroup(item.groupId)
+      } else if (item.kind === 'quick') {
+        emit('new-connection', { host: searchQuery.value.trim() })
+      }
     }
   }
 }
@@ -693,15 +775,26 @@ const contextMenuVisible = ref(false)
 const contextMenuStyle = ref<Record<string, string>>({})
 const contextMenuConfig = ref<ConnectionConfig | null>(null)
 
-function onContextMenu(e: MouseEvent, config: ConnectionConfig) {
+function clampMenuPos(x: number, y: number, menuW = 160, menuH = 280): { left: string; top: string } {
+  let left = x
+  let top = y
+  if (left + menuW > window.innerWidth) left = window.innerWidth - menuW - 4
+  if (left < 0) left = 4
+  if (top + menuH > window.innerHeight) top = y - menuH
+  if (top < 0) top = 4
+  return { left: left + 'px', top: top + 'px' }
+}
+
+function onContextMenu(e: MouseEvent, config: ConnectionConfig, prefix = 'conn:') {
   closeContextMenu()
-  contextMenuConfig.value = config
-  contextMenuStyle.value = {
-    position: 'fixed',
-    left: e.clientX + 'px',
-    top: e.clientY + 'px',
-    zIndex: '10000'
+  // If right-clicking an unselected item, replace selection with this card
+  const key = prefix + config.id
+  if (!selectedIds.value.has(key)) {
+    selectedIds.value = new Set([key])
   }
+  contextMenuConfig.value = config
+  const pos = clampMenuPos(e.clientX, e.clientY)
+  contextMenuStyle.value = { position: 'fixed', left: pos.left, top: pos.top, zIndex: '10000' }
   contextMenuVisible.value = true
 }
 
@@ -717,12 +810,8 @@ const groupContextTarget = ref<{ id: string; name: string } | null>(null)
 function onGroupContextMenu(e: MouseEvent, groupId: string, groupName: string) {
   closeContextMenu()
   groupContextTarget.value = { id: groupId, name: groupName }
-  contextMenuStyle.value = {
-    position: 'fixed',
-    left: e.clientX + 'px',
-    top: e.clientY + 'px',
-    zIndex: '10000'
-  }
+  const pos = clampMenuPos(e.clientX, e.clientY)
+  contextMenuStyle.value = { position: 'fixed', left: pos.left, top: pos.top, zIndex: '10000' }
   groupContextVisible.value = true
 }
 
@@ -791,6 +880,7 @@ onMounted(() => {
     resizeObserver = new ResizeObserver(() => updateContentWidth())
     resizeObserver.observe(startTabRef.value)
   }
+  nextTick(() => searchInputRef.value?.focus())
 })
 
 watch(focusedCardIndex, () => {
@@ -816,6 +906,42 @@ function doConnectVnc(config: ConnectionConfig) { closeContextMenu(); window.dis
 function doConnectSpice(config: ConnectionConfig) { closeContextMenu(); window.dispatchEvent(new CustomEvent('app:connect-spice', { detail: config })) }
 function doConnectDb(config: ConnectionConfig) { closeContextMenu(); window.dispatchEvent(new CustomEvent('app:connect-db', { detail: config })) }
 function doConnectFtp(config: ConnectionConfig) { closeContextMenu(); window.dispatchEvent(new CustomEvent('app:connect-ftp', { detail: config })) }
+function doEditConnection(config: ConnectionConfig | null) {
+  if (!config) return
+  closeContextMenu()
+  emit('edit-connection', config)
+}
+
+function doChangeGroupBulk() {
+  const ids = getSelectedConnectionIds()
+  if (ids.length === 0) return
+  closeContextMenu()
+  emit('change-group-ids', ids)
+}
+
+async function doDeleteBulk() {
+  const ids = getSelectedConnectionIds()
+  if (ids.length === 0) return
+  closeContextMenu()
+  try {
+    await ElMessageBox.confirm(
+      t('sidebar.deleteConfirm', { count: ids.length }),
+      '',
+      { confirmButtonText: t('sidebar.delete'), cancelButtonText: 'Cancel', type: 'warning' }
+    )
+  } catch {
+    return
+  }
+  await connectionStore.removeMany(ids)
+  selectedIds.value = new Set()
+}
+
+function doChangeGroup(config: ConnectionConfig | null) {
+  if (!config) return
+  closeContextMenu()
+  emit('change-group', config)
+}
+
 function doDuplicate(config: ConnectionConfig | null) {
   if (!config) return
   closeContextMenu()
@@ -1007,6 +1133,10 @@ async function doDelete(config: ConnectionConfig | null) {
   border-color: var(--accent);
   box-shadow: 0 0 0 1px var(--accent);
 }
+.start-card.selected {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
 
 .start-card-top {
   display: flex;
@@ -1130,6 +1260,11 @@ async function doDelete(config: ConnectionConfig | null) {
 .start-context-menu .menu-item.danger:hover {
   background: var(--bg-hover);
   color: var(--error);
+}
+.start-context-menu .menu-item.disabled {
+  color: var(--text-disabled);
+  cursor: default;
+  pointer-events: none;
 }
 .start-context-menu .menu-divider {
   border: none;

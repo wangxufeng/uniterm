@@ -9,7 +9,7 @@
       @tab-dragstart="onTabDragStart"
     />
     <div class="main-content">
-      <Sidebar ref="sidebarRef" :visible="sidebarVisible" @toggle="sidebarVisible = !sidebarVisible" @connect="onConnect" @connect-serial="showSerialDialog = true" @connect-sftp="onConnectSftp" @connect-ftp="onConnectFtp" @connect-rdp="onConnectRDP" @connect-vnc="onConnectVNC" @connect-spice="onConnectSPICE" @connect-d-b="onConnectDB" @connect-monitor="onConnectMonitor" @new-local-terminal-with-shell="createLocalTerminalWithShell" />
+      <Sidebar ref="sidebarRef" :visible="sidebarVisible" @toggle="sidebarVisible = !sidebarVisible" @connect="onConnect" @connect-serial="showSerialDialog = true" @connect-sftp="(c: any) => { const p = tabStore.activeTab; onConnectSftp(c, p?.type === 'start' ? p : undefined) }" @connect-ftp="(c: any) => { const p = tabStore.activeTab; onConnectFtp(c, p?.type === 'start' ? p : undefined) }" @connect-rdp="(c: any) => { const p = tabStore.activeTab; onConnectRDP(c, p?.type === 'start' ? p : undefined) }" @connect-vnc="(c: any) => { const p = tabStore.activeTab; onConnectVNC(c, p?.type === 'start' ? p : undefined) }" @connect-spice="(c: any) => { const p = tabStore.activeTab; onConnectSPICE(c, p?.type === 'start' ? p : undefined) }" @connect-d-b="(c: any) => { const p = tabStore.activeTab; onConnectDB(c, p?.type === 'start' ? p : undefined) }" @connect-monitor="(c: any) => { const p = tabStore.activeTab; onConnectMonitor(c, p?.type === 'start' ? p : undefined) }" @new-local-terminal-with-shell="createLocalTerminalWithShell" />
       <div class="tab-area">
         <template v-if="activeTab">
           <KeepAlive>
@@ -78,14 +78,34 @@
               @local-terminal="createLocalTerminalWithShell"
               @connect-serial="(keepOpen?: boolean) => { serialKeepOpen = keepOpen; showSerialDialog = true }"
               @close-self="(tabId: string) => closeTab(tabId)"
+              @edit-connection="onEditConnection"
+              @change-group="onChangeGroupFromStart"
+              @change-group-ids="onChangeGroupFromStartIds"
             />
           </KeepAlive>
         </template>
       </div>
       <AISidebar ref="aiSidebarRef" />
     </div>
-    <ConnectionForm v-model="showConnectionForm" :default-group-id="pendingGroupId" @save="onSaveOnly" @connect="onConnect" />
+    <ConnectionForm v-model="showConnectionForm" :config="editConfig" :default-group-id="pendingGroupId" @save="onSaveOnly" @connect="(c: ConnectionConfig, ko?: boolean) => { editConfig = null; onConnect(c, ko) }" @cancel="editConfig = null" />
     <SerialConnectDialog v-model="showSerialDialog" @connect="(sid: string, portName: string, baudRate: number) => onConnectSerial(sid, portName, baudRate, serialKeepOpen)" />
+    <!-- Change group dialog (from start tab context menu) -->
+    <el-dialog v-model="showChangeGroupFromStart" :title="t('conn.changeGroup')" width="360px">
+      <div class="group-list">
+        <div class="group-item" @click="onSelectGroupForStart(undefined)">{{ t('conn.noGroup') }}</div>
+        <div
+          v-for="g in connectionStore.groups"
+          :key="g.id"
+          class="group-item"
+          @click="onSelectGroupForStart(g.id)"
+        >
+          {{ g.name }}
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="showChangeGroupFromStart = false">{{ t('conn.deleteGroupCancel') }}</el-button>
+      </template>
+    </el-dialog>
     <CredentialPrompt
       v-model:visible="credentialVisible"
       :title="credentialTitle"
@@ -466,25 +486,25 @@ onMounted(async () => {
 
   // Panel/Tab/StartTab menu actions
   window.addEventListener('app:connect-sftp', ((e: CustomEvent) => {
-    const d = e.detail; const c = d?.config || d; if (c) onConnectSftp(c)
+    const d = e.detail; const c = d?.config || d; if (c) { const prev = tabStore.activeTab; onConnectSftp(c, prev?.type === 'start' ? prev : undefined) }
   }) as EventListener)
   window.addEventListener('app:connect-monitor', ((e: CustomEvent) => {
-    const d = e.detail; const c = d?.config || d; if (c) onConnectMonitor(c)
+    const d = e.detail; const c = d?.config || d; if (c) { const prev = tabStore.activeTab; onConnectMonitor(c, prev?.type === 'start' ? prev : undefined) }
   }) as EventListener)
   window.addEventListener('app:connect-rdp', ((e: CustomEvent) => {
-    const d = e.detail; const c = d?.config || d; if (c) onConnectRDP(c)
+    const d = e.detail; const c = d?.config || d; if (c) { const prev = tabStore.activeTab; onConnectRDP(c, prev?.type === 'start' ? prev : undefined) }
   }) as EventListener)
   window.addEventListener('app:connect-vnc', ((e: CustomEvent) => {
-    const d = e.detail; const c = d?.config || d; if (c) onConnectVNC(c)
+    const d = e.detail; const c = d?.config || d; if (c) { const prev = tabStore.activeTab; onConnectVNC(c, prev?.type === 'start' ? prev : undefined) }
   }) as EventListener)
   window.addEventListener('app:connect-spice', ((e: CustomEvent) => {
-    const d = e.detail; const c = d?.config || d; if (c) onConnectSPICE(c)
+    const d = e.detail; const c = d?.config || d; if (c) { const prev = tabStore.activeTab; onConnectSPICE(c, prev?.type === 'start' ? prev : undefined) }
   }) as EventListener)
   window.addEventListener('app:connect-db', ((e: CustomEvent) => {
-    const d = e.detail; const c = d?.config || d; if (c) onConnectDB(c)
+    const d = e.detail; const c = d?.config || d; if (c) { const prev = tabStore.activeTab; onConnectDB(c, prev?.type === 'start' ? prev : undefined) }
   }) as EventListener)
   window.addEventListener('app:connect-ftp', ((e: CustomEvent) => {
-    const d = e.detail; const c = d?.config || d; if (c) onConnectFtp(c)
+    const d = e.detail; const c = d?.config || d; if (c) { const prev = tabStore.activeTab; onConnectFtp(c, prev?.type === 'start' ? prev : undefined) }
   }) as EventListener)
 
 })
@@ -704,12 +724,28 @@ function onSaveOnly(config: ConnectionConfig) {
   connectionStore.add(config)
 }
 
+// Atomically remove a start tab and place a newly-created tab in its position.
+// Returns a cleanup function: call it AFTER creating the tab to reposition it.
+function closeStartAndReposition(prevTab: any): (newTabId: string) => void {
+  const idx = tabStore.tabs.indexOf(prevTab)
+  if (idx >= 0) tabStore.tabs.splice(idx, 1)
+  return (newTabId: string) => {
+    if (idx < 0) return
+    const newIdx = tabStore.tabs.findIndex((t: any) => t.id === newTabId)
+    if (newIdx < 0 || newIdx === idx) return
+    const [moved] = tabStore.tabs.splice(newIdx, 1)
+    tabStore.tabs.splice(Math.min(idx, tabStore.tabs.length), 0, moved)
+  }
+}
+
 async function onConnect(config: ConnectionConfig, keepOpen?: boolean) {
-  if (config.type === 'ftp') return onConnectFtp(config)
-  if (config.type === 'rdp') return onConnectRDP(config)
-  if (config.type === 'vnc') return onConnectVNC(config)
-  if (config.type === 'spice') return onConnectSPICE(config)
-  if (config.type === 'database') return onConnectDB(config)
+  const prev = tabStore.activeTab
+  const prevStart = (prev?.type === 'start' && !keepOpen) ? prev : undefined
+  if (config.type === 'ftp') { await onConnectFtp(config, prevStart); return }
+  if (config.type === 'rdp') { await onConnectRDP(config, prevStart); return }
+  if (config.type === 'vnc') { await onConnectVNC(config, prevStart); return }
+  if (config.type === 'spice') { await onConnectSPICE(config, prevStart); return }
+  if (config.type === 'database') { await onConnectDB(config, prevStart); return }
   connectionStore.add(config)
 
   // Credential check
@@ -740,11 +776,11 @@ async function onConnect(config: ConnectionConfig, keepOpen?: boolean) {
   panel.title = displayTitle
   panelStore.bindSession(panel.id, sessionId)
   sessionStore.initSession(sessionId)
-  const prev = tabStore.activeTab
-  const tab = tabStore.createTerminalTab(displayTitle, panel.id)
+  const tab = prev?.type === 'start'
+    ? tabStore.replaceStartTab(prev.id, displayTitle, panel.id)
+    : tabStore.createTerminalTab(displayTitle, panel.id)
   panelStore.movePanelToTab(panel.id, tab.id)
   RecordRecentConnection(config.id)
-  if (prev?.type === 'start' && !keepOpen) closeTab(prev.id)
 }
 
 function getShellLabel(path: string): string {
@@ -769,7 +805,47 @@ const pendingGroupId = ref<string | undefined>(undefined)
 
 function onNewConnectionFromStart(payload?: { host?: string; groupId?: string }) {
   pendingGroupId.value = payload?.groupId
+  editConfig.value = null
   showConnectionForm.value = true
+}
+
+const editConfig = ref<ConnectionConfig | null>(null)
+
+function onEditConnection(config: ConnectionConfig) {
+  editConfig.value = config
+  showConnectionForm.value = true
+}
+
+// Simple group selector when triggered from start tab context menu
+const showChangeGroupFromStart = ref(false)
+const changeGroupFromStartConfig = ref<ConnectionConfig | null>(null)
+
+function onChangeGroupFromStart(config: ConnectionConfig) {
+  changeGroupFromStartConfig.value = config
+  showChangeGroupFromStart.value = true
+}
+
+function onChangeGroupFromStartIds(ids: string[]) {
+  changeGroupFromStartIds.value = ids
+  showChangeGroupFromStart.value = true
+}
+
+const changeGroupFromStartIds = ref<string[]>([])
+
+function onSelectGroupForStart(groupId: string | undefined) {
+  // Bulk mode (from StartTab multi-select)
+  if (changeGroupFromStartIds.value.length > 0) {
+    connectionStore.setConnectionsGroup(changeGroupFromStartIds.value, groupId)
+    showChangeGroupFromStart.value = false
+    changeGroupFromStartIds.value = []
+    return
+  }
+  // Single mode (from context menu)
+  if (changeGroupFromStartConfig.value) {
+    connectionStore.setConnectionsGroup([changeGroupFromStartConfig.value.id], groupId)
+  }
+  showChangeGroupFromStart.value = false
+  changeGroupFromStartConfig.value = null
 }
 
 function onToggleAiLock(panelId: string) {
@@ -790,8 +866,12 @@ async function createLocalTerminal(shellPath?: string, keepOpen?: boolean) {
   panel.title = shellName
 
   try {
+    // Use a stable ID based on shell type so repeated local terminals
+    // merge into one recent-history entry instead of creating a new one
+    // every time.
+    const stableId = `local-terminal:${shellName.toLowerCase().replace(/\s+/g, '-')}`
     const config: ConnectionConfig = {
-      id: '',
+      id: stableId,
       name: shellName,
       type: 'local' as any,
       host: '',
@@ -802,22 +882,23 @@ async function createLocalTerminal(shellPath?: string, keepOpen?: boolean) {
     }
     panel.config = config
     connectionStore.add(config)
-    RecordRecentConnection(config.id)
+    // Local terminal sessions are temporary — don't record in history
     const info = await CreateSession('local', config)
     panelStore.bindSession(panel.id, info.id)
     sessionStore.initSession(info.id)
     // Create tab AFTER session is bound so BaseTerminal mounts with valid sessionId
     const prev = tabStore.activeTab
-    const tab = tabStore.createTerminalTab(shellName, panel.id)
+    const tab = prev?.type === 'start' && !keepOpen
+      ? tabStore.replaceStartTab(prev.id, shellName, panel.id)
+      : tabStore.createTerminalTab(shellName, panel.id)
     panelStore.movePanelToTab(panel.id, tab.id)
-    if (prev?.type === 'start' && !keepOpen) closeTab(prev.id)
   } catch (e) {
     console.error('Failed to create local terminal:', e)
     panelStore.removePanel(panel.id)
   }
 }
 
-async function onConnectSftp(config: ConnectionConfig) {
+async function onConnectSftp(config: ConnectionConfig, prevStart?: any) {
   connectionStore.add(config)
 
   const resolved = await ensureCredentials(config)
@@ -827,7 +908,9 @@ async function onConnectSftp(config: ConnectionConfig) {
   const panel = panelStore.createPanel(config, 'sftp')
   const displayTitle = config.name || `${config.user}@${config.host}`
   panel.title = displayTitle
+  const reposition = prevStart ? closeStartAndReposition(prevStart) : null
   const tab = tabStore.createSFPTab(displayTitle, panel.id)
+  if (reposition) reposition(tab.id)
   panelStore.movePanelToTab(panel.id, tab.id)
   RecordRecentConnection(config.id)
 
@@ -841,7 +924,7 @@ async function onConnectSftp(config: ConnectionConfig) {
   }
 }
 
-async function onConnectFtp(config: ConnectionConfig) {
+async function onConnectFtp(config: ConnectionConfig, prevStart?: any) {
   connectionStore.add(config)
 
   const resolved = await ensureCredentials(config)
@@ -850,7 +933,9 @@ async function onConnectFtp(config: ConnectionConfig) {
   const panel = panelStore.createPanel(config, 'sftp')
   const displayTitle = config.name || `${config.user}@${config.host}`
   panel.title = displayTitle
+  const reposition = prevStart ? closeStartAndReposition(prevStart) : null
   const tab = tabStore.createFtpTab(displayTitle, panel.id)
+  if (reposition) reposition(tab.id)
   panelStore.movePanelToTab(panel.id, tab.id)
   RecordRecentConnection(config.id)
 
@@ -864,7 +949,7 @@ async function onConnectFtp(config: ConnectionConfig) {
   }
 }
 
-async function onConnectRDP(config: ConnectionConfig) {
+async function onConnectRDP(config: ConnectionConfig, prevStart?: any) {
   connectionStore.add(config)
 
   const resolved = await ensureCredentials(config)
@@ -875,7 +960,9 @@ async function onConnectRDP(config: ConnectionConfig) {
 
   const panel = panelStore.createPanel(config, 'rdp')
   panel.title = displayTitle
+  const reposition = prevStart ? closeStartAndReposition(prevStart) : null
   const tab = tabStore.createRDPTab(displayTitle, panel.id)
+  if (reposition) reposition(tab.id)
   panelStore.movePanelToTab(panel.id, tab.id)
   RecordRecentConnection(config.id)
 
@@ -890,7 +977,7 @@ async function onConnectRDP(config: ConnectionConfig) {
   }
 }
 
-async function onConnectVNC(config: ConnectionConfig) {
+async function onConnectVNC(config: ConnectionConfig, prevStart?: any) {
   connectionStore.add(config)
 
   const resolved = await ensureCredentials(config)
@@ -901,7 +988,9 @@ async function onConnectVNC(config: ConnectionConfig) {
 
   const panel = panelStore.createPanel(config, 'vnc')
   panel.title = displayTitle
+  const reposition = prevStart ? closeStartAndReposition(prevStart) : null
   const tab = tabStore.createVNCTab(displayTitle, panel.id)
+  if (reposition) reposition(tab.id)
   panelStore.movePanelToTab(panel.id, tab.id)
   RecordRecentConnection(config.id)
 
@@ -916,7 +1005,7 @@ async function onConnectVNC(config: ConnectionConfig) {
   }
 }
 
-async function onConnectSPICE(config: ConnectionConfig) {
+async function onConnectSPICE(config: ConnectionConfig, prevStart?: any) {
   connectionStore.add(config)
 
   const resolved = await ensureCredentials(config)
@@ -927,7 +1016,9 @@ async function onConnectSPICE(config: ConnectionConfig) {
 
   const panel = panelStore.createPanel(config, 'spice')
   panel.title = displayTitle
+  const reposition = prevStart ? closeStartAndReposition(prevStart) : null
   const tab = tabStore.createSPICETab(displayTitle, panel.id)
+  if (reposition) reposition(tab.id)
   panelStore.movePanelToTab(panel.id, tab.id)
   RecordRecentConnection(config.id)
 
@@ -942,7 +1033,7 @@ async function onConnectSPICE(config: ConnectionConfig) {
   }
 }
 
-async function onConnectMonitor(config: ConnectionConfig) {
+async function onConnectMonitor(config: ConnectionConfig, prevStart?: any) {
   connectionStore.add(config)
 
   const resolved = await ensureCredentials(config)
@@ -952,7 +1043,9 @@ async function onConnectMonitor(config: ConnectionConfig) {
   const panel = panelStore.createPanel(config, 'monitor')
   const displayTitle = config.name || `${config.user}@${config.host}`
   panel.title = displayTitle
+  const reposition = prevStart ? closeStartAndReposition(prevStart) : null
   const tab = tabStore.createMonitorTab(displayTitle, panel.id)
+  if (reposition) reposition(tab.id)
   panelStore.movePanelToTab(panel.id, tab.id)
   RecordRecentConnection(config.id)
 
@@ -967,7 +1060,7 @@ async function onConnectMonitor(config: ConnectionConfig) {
   }
 }
 
-async function onConnectDB(config: ConnectionConfig) {
+async function onConnectDB(config: ConnectionConfig, prevStart?: any) {
   connectionStore.add(config)
 
   const resolved = await ensureCredentials(config)
@@ -981,7 +1074,9 @@ async function onConnectDB(config: ConnectionConfig) {
 
   const panel = panelStore.createPanel(config, 'database')
   panel.title = displayTitle
+  const reposition = prevStart ? closeStartAndReposition(prevStart) : null
   const tab = tabStore.createDBTab(displayTitle, panel.id)
+  if (reposition) reposition(tab.id)
   if (config.dbType === 'redis') {
     tab.type = 'redis' as any
   }
@@ -1016,10 +1111,11 @@ async function onConnectSerial(sessionId: string, portName: string, baudRate: nu
   panelStore.bindSession(panel.id, sessionId)
   sessionStore.initSession(sessionId)
   const prev = tabStore.activeTab
-  const tab = tabStore.createTerminalTab(panel.title, panel.id)
+  const tab = prev?.type === 'start' && !keepOpen
+    ? tabStore.replaceStartTab(prev.id, panel.title, panel.id)
+    : tabStore.createTerminalTab(panel.title, panel.id)
   panelStore.movePanelToTab(panel.id, tab.id)
-  RecordRecentConnection(config.id)
-  if (prev?.type === 'start' && !keepOpen) closeTab(prev.id)
+  // Serial connections are temporary — don't record in history
 }
 
 // Show/hide native RDP window on tab switch.
@@ -1123,6 +1219,21 @@ watch(() => settingsStore.settings.keyboard, () => {
 .input-menu-item:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
+}
+
+.group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.group-list .group-item {
+  padding: 10px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background .15s;
+}
+.group-list .group-item:hover {
+  background: var(--bg-hover);
 }
 
 </style>
