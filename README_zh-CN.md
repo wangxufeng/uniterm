@@ -41,7 +41,7 @@
 
 - **远程终端** — SSH / Telnet / Mosh，密码/私钥认证；含 SSH 隧道端口转发（任意连接可经 SSH 跳板访问）
 - **本地 & 串口终端** — PowerShell / CMD / Git Bash / WSL，以及串口连接（波特率等参数、本地回显）
-- **文件传输** — SFTP / FTP / FTPS / Zmodem，双栏浏览、鼠标拖拽上传下载，SSH 内 `rz`/`sz`
+- **文件传输** — SFTP / FTP / FTPS / SMB / WebDAV / S3 / Zmodem，双栏浏览、鼠标拖拽上传下载，SSH 内 `rz`/`sz`
 - **远程桌面** — RDP（Windows 远程桌面）、VNC（Linux 远程控制）、SPICE（KVM/QEMU 虚拟机）
 - **数据库客户端** — MySQL / PostgreSQL / Oracle / SQL Server / rqlite / Redis
 - **服务器监控** — CPU/内存/磁盘/网络、进程、端口、网卡实时监控
@@ -80,6 +80,9 @@
 | 终端 | WSL | 通过本地终端打开已安装的 WSL 发行版 |
 | 文件传输 | SFTP | 服务器文件管理与传输 |
 | 文件传输 | FTP / FTPS | 网站空间、NAS 文件传输 |
+| 文件传输 | SMB | Windows 共享文件夹、NAS 文件访问 |
+| 文件传输 | WebDAV | WebDAV 服务器文件管理 |
+| 文件传输 | S3 | 兼容 Amazon S3 的对象存储 |
 | 文件传输 | Zmodem | SSH 终端内 rz/sz 命令传输文件 |
 | 远程桌面 | RDP | Windows 服务器远程桌面管理（仅 Windows） |
 | 远程桌面 | VNC | Linux 服务器远程控制 |

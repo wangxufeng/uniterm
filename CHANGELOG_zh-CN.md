@@ -6,20 +6,17 @@
 - **new** 新增 WebDAV 文件传输支持，可连接 WebDAV 服务器进行文件管理。
 - **new** 新增 S3 对象存储支持，兼容 Amazon S3 API，支持列出存储桶、文件浏览和传输。
 - **new** 新增起始页（新标签页），展示最近连接、分组和全部连接卡片，支持搜索和类型筛选。
-- **improve** 统一组件颜色系统和按钮样式，优化视觉一致性。
-- **improve** AI 通过 prompt 重新出现检测命令完成，减少不必要的等待时间。
-- **improve** 起始页和侧边栏右键菜单按分类排序，类型筛选下拉按标签字母排序。
-- **improve** S3 连接复用 host/user/password 通用字段（Endpoint/AccessKey/SecretKey），简化表单。
-- **improve** 空 Bucket 时 S3 自动列出所有存储桶，支持进入/退出存储桶。
-- **bugfix** 修复起始页右键编辑卡片不填入连接内容的问题。
-- **bugfix** 修复起始页类型筛选不应用于最近连接的问题。
+- **improve** 统一组件颜色系统和按钮样式，优化视觉一致性。（@surenwuyuwuqiu）
+- **improve** AI 通过 prompt 重新出现检测命令完成，减少不必要的等待时间。（@surenwuyuwuqiu）
+- **improve** 终端文本高亮改用 ANSI 主题颜色，适配不同终端主题。
+- **improve** 优化 uniTerm 浅色终端主题配色。
 - **bugfix** 修复串口本地回显导致按键重复的问题。
-- **bugfix** 修复后台标签页终端输出被截断的问题。
+- **bugfix** 修复后台标签页终端输出被截断的问题。（@surenwuyuwuqiu）
+- **bugfix** 修复 macOS 本地终端未以登录 shell 方式启动的问题。（@surenwuyuwuqiu）
 - **bugfix** 修复新建标签页快捷键 Ctrl+Shift+N 打开连接表单而非起始页的问题。
 - **bugfix** 修复设置页列宽被挤压的问题。
-- **bugfix** 修复 simples3 在 Windows 上签名计算错误的问题（反斜杠导致 AWS V4 签名失败）。
-- **bugfix** 修复所有文件传输协议的暂停/继续功能实际不生效的问题。
-- **bugfix** 修复 SMB/WebDAV/S3 传输进度条不显示进度的问题。
+
+感谢 @surenwuyuwuqiu 对本版本的贡献。
 
 ## v1.2.1
 

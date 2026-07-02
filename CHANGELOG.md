@@ -6,20 +6,17 @@
 - **new** Added WebDAV file transfer support for connecting to WebDAV servers.
 - **new** Added S3 object storage support, compatible with Amazon S3 API. Browse buckets, list objects, upload and download files.
 - **new** Added start tab page showing recent connections, groups, and all connections as cards with search and type filtering.
-- **improve** Unified color system and button styles across all components for visual consistency.
-- **improve** AI detects command completion via prompt reappearance, reducing unnecessary wait time.
-- **improve** Context menus and type filter dropdowns sorted logically.
-- **improve** S3 connections reuse common host/user/password fields (Endpoint/AccessKey/SecretKey), simplifying the form.
-- **improve** S3 with empty bucket automatically lists all buckets, with navigate in/out support.
-- **bugfix** Fixed edit dialog not populating when triggered from start tab context menu.
-- **bugfix** Fixed type filter not applying to recent connections on start tab.
+- **improve** Unified color system and button styles across all components for visual consistency. (@surenwuyuwuqiu)
+- **improve** AI detects command completion via prompt reappearance, reducing unnecessary wait time. (@surenwuyuwuqiu)
+- **improve** Terminal text highlighting now uses ANSI theme colors to adapt to different terminal themes.
+- **improve** Optimized uniTerm light terminal theme colors.
 - **bugfix** Fixed serial port local echo causing double keystrokes.
-- **bugfix** Fixed background tab terminal output being truncated on buffer trim.
+- **bugfix** Fixed background tab terminal output being truncated on buffer trim. (@surenwuyuwuqiu)
+- **bugfix** Fixed macOS local terminal not starting as a login shell. (@surenwuyuwuqiu)
 - **bugfix** Fixed Ctrl+Shift+N opening connection form instead of start tab.
 - **bugfix** Fixed settings page column width being squeezed.
-- **bugfix** Fixed simples3 Windows cross-platform signature bug (backslash breaking AWS V4 signing).
-- **bugfix** Fixed pause/resume not actually working for all file transfer protocols.
-- **bugfix** Fixed SMB/WebDAV/S3 transfer progress bar not showing progress.
+
+Thanks to @surenwuyuwuqiu for contributions to this release.
 
 ## v1.2.1
 

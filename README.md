@@ -41,7 +41,7 @@ Remote terminal (SSH / Telnet / Mosh), local & serial terminal (PowerShell / CMD
 
 - **Remote Terminal** — SSH / Telnet / Mosh with password or key authentication; includes SSH tunnel port forwarding so any connection can route through an SSH jump host.
 - **Local & Serial Terminal** — PowerShell / CMD / Git Bash / WSL plus serial connections with configurable baud rate, data bits, stop bits, parity, and local echo.
-- **File Transfer** — SFTP / FTP / FTPS / Zmodem with dual-pane browsing and `rz`/`sz` support in SSH terminals.
+- **File Transfer** — SFTP / FTP / FTPS / SMB / WebDAV / S3 / Zmodem with dual-pane browsing and `rz`/`sz` support in SSH terminals.
 - **Remote Desktop** — RDP (Windows Remote Desktop), VNC (Linux remote control), SPICE (KVM/QEMU VMs)
 - **Database Client** — MySQL / PostgreSQL / Oracle / SQL Server / rqlite / Redis.
 - **Server Monitor** — Real-time CPU, memory, disk, network, processes, ports, and network interfaces.
@@ -80,6 +80,9 @@ Connection management, split panes, cloud sync, themes — your terminal, your w
 | Terminal | WSL | Open installed WSL distributions via local terminal |
 | File Transfer | SFTP | Server file management and transfer |
 | File Transfer | FTP / FTPS | Website hosting, NAS file transfer |
+| File Transfer | SMB | Windows shared folders, NAS file access |
+| File Transfer | WebDAV | WebDAV server file management |
+| File Transfer | S3 | Amazon S3 compatible object storage |
 | File Transfer | Zmodem | In-terminal file transfer via rz/sz commands |
 | Remote Desktop | RDP | Windows server remote desktop management (Windows only) |
 | Remote Desktop | VNC | Linux server remote control |
