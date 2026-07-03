@@ -158,7 +158,7 @@ onUnmounted(() => {
   align-items: center;
   height: 44px;
   padding: 0 8px;
-  gap: 6px;
+  gap: 2px;
   background: var(--bg-elevated);
   flex-shrink: 0;
   position: relative;

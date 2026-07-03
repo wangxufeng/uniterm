@@ -43,7 +43,7 @@ const restoreMaskId = `rm-${Math.random().toString(36).slice(2, 9)}`
 }
 
 .window-controls {
-  gap: 0;
+  gap: 2px;
 }
 
 
@@ -52,7 +52,7 @@ const restoreMaskId = `rm-${Math.random().toString(36).slice(2, 9)}`
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
+  padding: 5px 8px;
   height: 28px;
   border: none;
   border-radius: var(--radius-sm);
