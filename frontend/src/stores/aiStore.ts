@@ -141,7 +141,7 @@ async function loadSessionsFromBackend(): Promise<{ sessions: AISession[], curre
 }
 
 export const useAIStore = defineStore('ai', () => {
-  const visible = ref(true)
+  const visible = ref(false)
   const messages = ref<AIMessage[]>([])
   const mode = ref<ExecutionMode>('confirm_dangerous')
   const config = ref<AIConfig>({ ...DEFAULT_CONFIG })
@@ -252,7 +252,7 @@ export const useAIStore = defineStore('ai', () => {
     // Load sidebar visibility from local state
     try {
       const state = await LoadLocalState()
-      visible.value = state.aiSidebarVisible ?? true
+      visible.value = state.aiSidebarVisible ?? false
     } catch {
       // keep default
     }

@@ -249,7 +249,7 @@ function RDPShowForOverlay() {
 const showConnectionForm = ref(false)
 const showSerialDialog = ref(false)
 const serialKeepOpen = ref(false)
-const sidebarVisible = ref(true)
+const sidebarVisible = ref(false)
 const sidebarRef = ref<any>(null)
 const aiSidebarRef = ref<any>(null)
 
@@ -444,7 +444,7 @@ onMounted(async () => {
   // Load sidebar visibility from local state
   try {
     const state = await LoadLocalState()
-    sidebarVisible.value = state.sidebarVisible ?? true
+    sidebarVisible.value = state.sidebarVisible ?? false
   } catch {
     // keep default
   }
