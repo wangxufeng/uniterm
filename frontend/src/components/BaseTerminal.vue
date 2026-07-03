@@ -619,6 +619,15 @@ function handleTerminalKey(e: KeyboardEvent): boolean {
     return false
   }
 
+  // Ctrl+Shift+C: copy terminal selection to clipboard
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'c' || e.key === 'C') && e.type === 'keydown') {
+    const sel = terminal?.getSelection()
+    if (sel) {
+      navigator.clipboard.writeText(sel).catch(() => {})
+    }
+    return false
+  }
+
   // macOS-style cursor word/line jumping via Option/Cmd + arrow keys
   if (e.type === 'keydown' && (e.altKey || e.metaKey)) {
     if (e.key === 'ArrowLeft') {
