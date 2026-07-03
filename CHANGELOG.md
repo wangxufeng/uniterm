@@ -1,5 +1,30 @@
 # Changelog
 
+## v1.3.0
+
+- **new** Redesigned start page (new tab) with quick connect parsing that auto-detects host, port, and username from input strings.
+- **new** Redesigned new connection dialog with left sidebar category navigation + icon sub-type grid for a more intuitive experience.
+- **new** Custom terminal color themes with .itermcolors import/export support. (@surenwuyuwuqiu)
+- **new** Terminal content export to text file via right-click menu, tab menu, or panel menu.
+- **new** Terminal search via Ctrl+F / Cmd+F with prev/next navigation.
+- **new** SMB share browsing: leave share name empty to list all available shares, mount on first navigation. Breadcrumb organized as /share/path.
+- **improve** Unified connection type icons across all UI components (connection form, sidebar, start page, tabs) with dedicated S3/SMB/WebDAV icons.
+- **improve** S3 breadcrumb now includes bucket name, organized as /bucket/path.
+- **improve** Connections sidebar and AI sidebar default to closed to prevent startup flash; only the start page is shown initially.
+- **improve** Unified header button spacing and window control button sizing for a more compact look.
+- **improve** Added macOS-style Option/Cmd + arrow keys for cursor word/line jumping (Option+Arrow = word jump, Cmd+Arrow = line start/end).
+- **improve** Ctrl+Shift+C copies terminal selection to clipboard.
+- **improve** Close confirmation dialog when active connection tabs exist, preventing accidental quit.
+- **improve** Removed "Local"/"Remote" text labels from SFTP dual-pane breadcrumb for a cleaner look.
+- **improve** Shortened SSH keepalive interval for better connection stability. (@surenwuyuwuqiu)
+- **improve** Removed "Open Settings" keyboard shortcut binding to avoid conflict with terminal copy. Shortcut settings page reordered by usage frequency.
+- **bugfix** Fixed Git Bash Chinese character display (mojibake). (@surenwuyuwuqiu)
+- **bugfix** Fixed terminal rendering not filling the container after duplicating a session and resizing the window.
+- **bugfix** Fixed mouse scroll wheel misbehavior after reactivating a background tab.
+- **bugfix** Fixed extra newlines when pasting text into vim due to CRLF line endings.
+
+Thanks to @surenwuyuwuqiu for their contribution to this release.
+
 ## v1.2.2
 
 - **new** Added SMB file transfer support with remote file browsing, upload, and download.
