@@ -577,6 +577,32 @@ function handleTerminalKey(e: KeyboardEvent): boolean {
     return false
   }
 
+  // macOS-style cursor word/line jumping via Option/Cmd + arrow keys
+  if (e.type === 'keydown' && (e.altKey || e.metaKey)) {
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault()
+      if (e.metaKey) {
+        // Cmd+Left → beginning of line
+        SessionWrite(props.sessionId || '', '\x1b[H')
+      } else if (e.altKey) {
+        // Option+Left → backward word
+        SessionWrite(props.sessionId || '', '\x1bb')
+      }
+      return false
+    }
+    if (e.key === 'ArrowRight') {
+      e.preventDefault()
+      if (e.metaKey) {
+        // Cmd+Right → end of line
+        SessionWrite(props.sessionId || '', '\x1b[F')
+      } else if (e.altKey) {
+        // Option+Right → forward word
+        SessionWrite(props.sessionId || '', '\x1bf')
+      }
+      return false
+    }
+  }
+
   // Suggestion navigation (only on keydown, ignore keyup)
   if (suggestions.isVisible() && e.type === 'keydown') {
     if (e.key === 'ArrowDown') {
