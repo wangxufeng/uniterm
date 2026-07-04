@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.3.1
+
+- **new** Hover "..." button on sidebar connections and start tab cards, clicking opens the context menu.
+- **new** Windows hidden file detection for both local files and remote SFTP Windows servers.
+- **improve** Unified change-group dialog: start tab cards now reuse the sidebar's full dialog with new-group support.
+- **improve** Removed redundant Refresh and Upload items from SFTP context menus (available in toolbar).
+- **improve** SFTP transfer progress bar: fixed row height to prevent jitter, unified icons and font sizes.
+- **improve** Shortened "Duplicate Session" to "Duplicate" in context menus.
+- **improve** Replaced all non-lucide icons (raw SVGs, emoji, text symbols) with lucide icon components.
+- **bugfix** Fixed start tab card edit not persisting.
+
 ## v1.3.0
 
 - **new** Redesigned start page (new tab) with quick connect parsing that auto-detects host, port, and username from input strings.
