@@ -101,31 +101,31 @@ Oracle Database support is implemented with a pure Go driver. uniTerm does not b
 <p align="center">
   <picture>
     <source srcset="docs/imgs/start_tab.png" media="(prefers-color-scheme: dark)" />
-    <img src="docs/imgs/start_tab_light.png" alt="Start Page" width="45%" />
+    <img src="docs/imgs/start_tab_light.png" alt="Start Page" width="45%" loading="eager" />
   </picture>
   <picture>
     <source srcset="docs/imgs/new_connection.png" media="(prefers-color-scheme: dark)" />
-    <img src="docs/imgs/new_connection_light.png" alt="New Connection" width="45%" />
+    <img src="docs/imgs/new_connection_light.png" alt="New Connection" width="45%" loading="eager" />
   </picture>
 </p>
 <p align="center">
   <picture>
     <source srcset="docs/imgs/ai_assistant.png" media="(prefers-color-scheme: dark)" />
-    <img src="docs/imgs/ai_assistant_light.png" alt="SSH Terminal with AI Assistant" width="45%" />
+    <img src="docs/imgs/ai_assistant_light.png" alt="SSH Terminal with AI Assistant" width="45%" loading="eager" />
   </picture>
   <picture>
     <source srcset="docs/imgs/workspace.png" media="(prefers-color-scheme: dark)" />
-    <img src="docs/imgs/workspace_light.png" alt="Workspace" width="45%" />
+    <img src="docs/imgs/workspace_light.png" alt="Workspace" width="45%" loading="eager" />
   </picture>
 </p>
 <p align="center">
   <picture>
     <source srcset="docs/imgs/sftp.png" media="(prefers-color-scheme: dark)" />
-    <img src="docs/imgs/sftp_light.png" alt="SFTP File Transfer" width="45%" />
+    <img src="docs/imgs/sftp_light.png" alt="SFTP File Transfer" width="45%" loading="eager" />
   </picture>
   <picture>
     <source srcset="docs/imgs/database.png" media="(prefers-color-scheme: dark)" />
-    <img src="docs/imgs/database_light.png" alt="Database Browser" width="45%" />
+    <img src="docs/imgs/database_light.png" alt="Database Browser" width="45%" loading="eager" />
   </picture>
 </p>
   </picture>
