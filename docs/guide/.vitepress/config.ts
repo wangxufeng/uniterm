@@ -52,7 +52,8 @@ const sidebarEn = [
   {
     text: 'Introduction',
     items: [
-      { text: 'About uniTerm', link: '/en/introduction' }
+      { text: 'About uniTerm', link: '/en/introduction' },
+      { text: 'Supported Protocols', link: '/en/protocols' }
     ]
   },
   {
