@@ -224,6 +224,7 @@ Thanks to the following people for contributing code and improvements, and to ev
 
 - [@yuwei5380](https://github.com/yuwei5380)
 - [@surenwuyuwuqiu](https://github.com/surenwuyuwuqiu)
+- [@wangxufeng](https://github.com/wangxufeng)
 
 ## License
 

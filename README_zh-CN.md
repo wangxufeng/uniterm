@@ -224,6 +224,7 @@ uniTerm/
 
 - [@yuwei5380](https://github.com/yuwei5380)
 - [@surenwuyuwuqiu](https://github.com/surenwuyuwuqiu)
+- [@wangxufeng](https://github.com/wangxufeng)
 
 ## 开源协议
 
