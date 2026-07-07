@@ -329,8 +329,6 @@ func (s *RDPSession) Connect(config ConnectionConfig) error {
 			adv.PutProperty("RedirectDrives", true)
 			adv.PutProperty("DisplayConnectionBar", false)
 			adv.PutProperty("EnableAutoReconnect", true)
-			adv.PutProperty("AuthenticationLevel", 0)
-			adv.PutProperty("EnableCredSspSupport", false)
 			adv.PutProperty("WarnOnDirectConnect", false)
 			adv.PutProperty("ContainerHandledFullScreen", true)
 			if config.RdpSmartSizing {
@@ -350,26 +348,14 @@ func (s *RDPSession) Connect(config ConnectionConfig) error {
 		if advHigh != nil {
 			a := advHigh.ToIDispatch()
 			if a != nil {
-				a.PutProperty("AuthenticationLevel", 0)
 				a.PutProperty("ContainerHandledFullScreen", true)
-				a.PutProperty("EnableCredSspSupport", false)
 				a.PutProperty("WarnOnDirectConnect", false)
 				a.Release()
-				log.Writef("[RDP] AdvancedSettings%d: AuthLevel=0, CredSsp=false", ver)
+				log.Writef("[RDP] AdvancedSettings%d: security prompts suppressed", ver)
 			}
 		}
 	}
 
-	// SecuredSettings2: disable security layer negotiation
-	secObj, _ := dispatch.GetProperty("SecuredSettings2")
-	if secObj != nil {
-		sec := secObj.ToIDispatch()
-		if sec != nil {
-			sec.PutProperty("NegotiateSecurityLayer", false)
-			sec.Release()
-			log.Writef("[RDP] SecuredSettings2: NegotiateSecurityLayer=false")
-		}
-	}
 
 	// Suppress server certificate warning at OS level
 	setAuthLevelOverride()
@@ -701,8 +687,6 @@ func (s *RDPSession) configureNonScriptable(password string) {
 		nsUnk.PutProperty("AllowPromptingForCredentials", false)
 		nsUnk.PutProperty("PromptForCredentials", false)
 		nsUnk.PutProperty("PromptForCredentialsOnce", false)
-		nsUnk.PutProperty("AuthenticationLevel", 0)
-		nsUnk.PutProperty("EnableCredSspSupport", false)
 		nsUnk.PutProperty("MarkRdpSettingsSecure", true)
 		nsUnk.CallMethod("MarkRdpSettingsSecure", true)
 		if password != "" {
