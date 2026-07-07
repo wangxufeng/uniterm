@@ -2,7 +2,7 @@
   <img src="build/appicon.png" alt="uniTerm" width="128" height="128" />
   <h1>uniTerm</h1>
   <p>一款轻量级一站式终端软件，支持 SSH、RDP、VNC、SFTP、数据库 等 20 余种协议<br>内置可自主执行的 AI Agent，规划并执行多轮 Shell 命令</p>
-  <p><a href="https://uniterm.net">🌐 软件首页</a> &nbsp;|&nbsp; <a href="https://github.com/ys-ll/uniterm">💻 GitHub</a> &nbsp;|&nbsp; <a href="https://gitee.com/ys-l/uniterm">💻 Gitee</a></p>
+  <p><a href="https://uniterm.net">🌐 软件首页</a> &nbsp;|&nbsp; <a href="https://uniterm.net/guide/zh/introduction">📖 用户手册</a> &nbsp;|&nbsp; <a href="https://github.com/ys-ll/uniterm">💻 GitHub</a> &nbsp;|&nbsp; <a href="https://gitee.com/ys-l/uniterm">💻 Gitee</a></p>
 </div>
 
 <div align="center">
