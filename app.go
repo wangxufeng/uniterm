@@ -533,7 +533,10 @@ func (a *App) CreateSession(sessionType string, config session.ConnectionConfig)
 		ssh.SetEncoding(config.Encoding)
 	}
 
-	// Apply serial config and connect for serial sessions.
+	// Apply serial config; connection itself is handled by the async goroutine
+	// below (same pattern as SSH/Local). Calling serialSess.Connect here as
+	// well would open the port a second time in the goroutine and immediately
+	// fail with "Serial port busy" once the first handle is still live.
 	if serialSess, ok := s.(*session.SerialSession); ok {
 		var sb serial.StopBits
 		switch config.SerialStopBits {
@@ -562,18 +565,13 @@ func (a *App) CreateSession(sessionType string, config session.ConnectionConfig)
 			dataBits = 8
 		}
 
-		serialCfg := session.SerialConfig{
+		serialSess.SetSerialConfig(session.SerialConfig{
 			PortName: config.SerialPort,
 			BaudRate: config.SerialBaudRate,
 			DataBits: dataBits,
 			StopBits: sb,
 			Parity:   par,
-		}
-		serialSess.SetSerialConfig(serialCfg)
-		if err := serialSess.Connect(config); err != nil {
-			_ = a.sessionManager.Close(s.ID())
-			return nil, fmt.Errorf("serial connect %s: %w", config.SerialPort, err)
-		}
+		})
 	}
 
 	// ── SSH Tunnel ──────────────────────────────────────────────
