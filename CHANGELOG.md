@@ -9,6 +9,7 @@
 
 **Improvements**
 - Database connection parameters are now customizable. DSN construction has been refactored to URL format, allowing users to specify additional database parameters.
+- Linux build upgraded to webkit2gtk 4.1 for better compatibility with newer distributions.
 
 **Bug Fixes**
 - Fixed macOS key-repeat in terminal. Holding a key now produces continuous input instead of showing the press-and-hold accent picker. (@surenwuyuwuqiu)
@@ -29,6 +30,7 @@ Thanks to @surenwuyuwuqiu and @wangxufeng for their contributions to this releas
 
 **改进**
 - 数据库连接参数支持自定义。DSN 构建重构为 URL 格式，用户可指定额外数据库参数。
+- Linux 构建升级至 webkit2gtk 4.1，提升新版发行版兼容性。
 
 **Bug 修复**
 - 修复 macOS 终端按键长按不重复的问题。长按按键现在产生连续输入，不再弹出重音符号选择器。（@surenwuyuwuqiu）
