@@ -14,7 +14,7 @@ Once an SSH connection is established, the monitoring panel can be opened from s
 | Panel Menu | Click the `...` button on the panel header → **Open Server Monitor** |
 | Sidebar Context Menu | Right-click an SSH connection → **Open Server Monitor** |
 
-The server monitor opens as an independent tab alongside terminal, file transfer, and other tabs. It supports drag-to-reorder and drag-to-split into panels.
+The server monitor opens as an independent tab alongside terminal, file transfer, and other tabs. It supports drag-to-reorder.
 
 ## Interface Overview
 
