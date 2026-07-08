@@ -33,6 +33,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Free disk space (macOS)
+        if: matrix.platform == 'darwin/universal'
+        run: |
+          sudo rm -rf /Library/Developer/CoreSimulator
+          sudo rm -rf /Applications/Xcode_*.app 2>/dev/null || true
+          df -h /
+
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
