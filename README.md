@@ -43,7 +43,7 @@ Remote terminal (SSH / Telnet / Mosh), local & serial terminal (PowerShell / CMD
 - **Local & Serial Terminal** — PowerShell / CMD / Git Bash / WSL plus serial connections with configurable baud rate, data bits, stop bits, parity, and local echo.
 - **File Transfer** — SFTP / FTP / FTPS / SMB / WebDAV / S3 / Zmodem with dual-pane browsing and `rz`/`sz` support in SSH terminals.
 - **Remote Desktop** — RDP (Windows Remote Desktop), VNC (Linux remote control), SPICE (KVM/QEMU VMs)
-- **Database Client** — MySQL / PostgreSQL / Oracle / SQL Server / rqlite / Redis.
+- **Database Client** — MySQL / PostgreSQL / Oracle / SQL Server / rqlite / Redis / MongoDB.
 - **Server Monitor** — Real-time CPU, memory, disk, network, processes, ports, and network interfaces.
 
 ### AI Assistant
@@ -93,6 +93,7 @@ Connection management, split panes, cloud sync, themes — your terminal, your w
 | Database | SQL Server | SQL Server connections through a pure Go driver |
 | Database | rqlite | Lightweight distributed DB built on SQLite with Raft consensus |
 | Database | Redis | In-memory key-value store with visual key browsing and editing |
+| Database | MongoDB | Document database with tree browsing, query editor, and inline editing |
 
 Oracle Database support is implemented with a pure Go driver. uniTerm does not bundle Oracle Database, Oracle Instant Client, OJDBC, wallet files, or Oracle brand assets; users are responsible for their own Oracle licenses, credentials, and database access.
 

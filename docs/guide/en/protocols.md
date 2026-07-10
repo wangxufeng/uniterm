@@ -38,11 +38,12 @@ uniTerm supports 20+ connection protocols, covering remote terminals, remote des
 
 ## Databases
 
-| Database | Default Port |
-|--------|----------|
-| MySQL | 3306 |
-| PostgreSQL | 5432 |
-| Oracle | 1521 |
-| SQL Server | 1433 |
-| rqlite | 4001 |
-| Redis | 6379 |
+| Database | Default Port | Description |
+|--------|----------|------|
+| MySQL | 3306 | MySQL protocol: MySQL, MariaDB, TiDB, and more |
+| PostgreSQL | 5432 | PostgreSQL protocol: PostgreSQL, CockroachDB, and more |
+| Oracle | 1521 | Oracle Database via pure Go driver |
+| SQL Server | 1433 | SQL Server via pure Go driver |
+| rqlite | 4001 | Lightweight distributed DB built on SQLite with Raft consensus |
+| Redis | 6379 | In-memory key-value store with visual key browsing and editing |
+| MongoDB | 27017 | Document database with tree browsing, query editor, and inline editing |

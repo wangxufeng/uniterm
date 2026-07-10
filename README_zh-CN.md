@@ -43,7 +43,7 @@
 - **本地 & 串口终端** — PowerShell / CMD / Git Bash / WSL，以及串口连接（波特率等参数、本地回显）
 - **文件传输** — SFTP / FTP / FTPS / SMB / WebDAV / S3 / Zmodem，双栏浏览、鼠标拖拽上传下载，SSH 内 `rz`/`sz`
 - **远程桌面** — RDP（Windows 远程桌面）、VNC（Linux 远程控制）、SPICE（KVM/QEMU 虚拟机）
-- **数据库客户端** — MySQL / PostgreSQL / Oracle / SQL Server / rqlite / Redis
+- **数据库客户端** — MySQL / PostgreSQL / Oracle / SQL Server / rqlite / Redis / MongoDB
 - **服务器监控** — CPU/内存/磁盘/网络、进程、端口、网卡实时监控
 
 ### AI 助理
@@ -93,6 +93,7 @@
 | 数据库 | SQL Server | 通过纯 Go 驱动连接 SQL Server |
 | 数据库 | rqlite | 基于 SQLite、Raft 共识的轻量分布式数据库 |
 | 数据库 | Redis | 内存键值数据库，可视化键值浏览与编辑 |
+| 数据库 | MongoDB | 文档数据库，树形浏览、查询编辑与行内编辑 |
 
 Oracle Database 支持基于纯 Go 驱动实现。uniTerm 不随安装包分发 Oracle Database、Oracle Instant Client、OJDBC、Wallet 文件或 Oracle 品牌素材；用户需自行确保其 Oracle 授权、凭据和数据库访问权限合规。
 

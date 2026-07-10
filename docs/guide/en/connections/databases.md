@@ -1,6 +1,6 @@
 # Databases
 
-uniTerm has a built-in database client that supports mainstream relational databases and Redis.
+uniTerm has a built-in database client that supports mainstream relational databases, Redis, and MongoDB.
 
 ## Relational Databases
 
@@ -44,6 +44,7 @@ The context menu provides the following operations:
 
 ### Data Query
 
+- **AI Natural Language** -- Describe the query in plain language in the AI input box at the top, and AI fetches table schemas to generate the SQL statement
 - **SQL Query** -- Enter SQL and click Execute or press `Ctrl+Enter` to run. Results are displayed in a table; NULL values are shown in italics. Double-clicking a table name runs a default query for the first 100 rows
 - **Insert Row** -- Automatically detects column types, default values, and auto-increment columns to generate a blank insert form
 - **Edit Row** -- Click the pencil icon to open the edit form. Supports modifying all columns and toggling NULL (requires the query result to include the primary key column)
@@ -101,6 +102,46 @@ The context menu provides the following operations:
 - **Set Expiration** -- Set an expiration time when creating or editing a key
 - **Remove Expiration** -- Remove the expiration time to make the key persistent
 
+
+## MongoDB
+
+MongoDB provides document database browsing, querying, and inline document editing.
+
+![MongoDB](/imgs/database_light.png)
+
+### Connection Parameters
+
+| Parameter | Description |
+|------|------|
+| Host | MongoDB server address |
+| Port | Default 27017 |
+| Username | MongoDB login user (optional) |
+| Password | MongoDB authentication password (optional) |
+| SSH Tunnel | When enabled, encrypts the connection to intranet MongoDB via an SSH jump host. Connection auto-detection is available when the SSH host runs `mongod` |
+
+### Database Navigation
+
+The left-side tree panel displays the MongoDB hierarchy: databases, collections, and indexes.
+
+- **Expand/Collapse** -- Click the arrow to browse databases and collections
+- **Right-click Menu** -- Create/drop databases and collections via the context menu
+
+### Query Editor
+
+- **Filter Query** -- Enter a MongoDB Extended JSON filter and click Execute or press `Ctrl+Enter` to run. Results are displayed in a paginated table
+- **Aggregation** -- Write aggregation pipelines for advanced data processing
+- **AI Natural Language** -- Describe the query in plain language in the AI input box at the top, and AI generates the MongoDB filter automatically based on the collection schema
+
+### Document Editing
+
+- **View Document** -- Click a document to view its full content
+- **Edit Document** -- Modify document fields inline and save
+- **Insert Document** -- Insert a new document with JSON content
+- **Delete Document** -- Delete a document with confirmation
+
+### Index Management
+
+View existing indexes, create new indexes with custom keys and options.
 
 ::: tip Related
 - [Remote Terminal](/en/connections/remote-terminal) -- SSH tunnel configuration
