@@ -107,8 +107,6 @@ The context menu provides the following operations:
 
 MongoDB provides document database browsing, querying, and inline document editing.
 
-![MongoDB](/imgs/database_light.png)
-
 ### Connection Parameters
 
 | Parameter | Description |
