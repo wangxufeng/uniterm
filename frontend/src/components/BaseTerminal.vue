@@ -592,6 +592,7 @@ function filterTerminalInput(input: string, inAlternateScreen: boolean): string 
 function writeTerminalInput(data: string, inAlternateScreen: boolean) {
   const sid = props.sessionId
   const filtered = filterTerminalInput(data, inAlternateScreen)
+  // Don't send empty input - avoids extra blank line when pressing Enter with no command
   if (!sid || !filtered) return
 
   if (props.broadcastActive && props.workspaceId) {

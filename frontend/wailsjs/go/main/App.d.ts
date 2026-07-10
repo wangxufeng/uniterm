@@ -89,6 +89,8 @@ export function GetTableSchema(arg1:string,arg2:string,arg3:string):Promise<data
 
 export function GetTables(arg1:string,arg2:string):Promise<Array<database.TableInfo>>;
 
+export function IsSerialLogEnabled(arg1:string):Promise<boolean>;
+
 export function KillProcess(arg1:string,arg2:number,arg3:string):Promise<void>;
 
 export function ListSerialPorts():Promise<Array<string>>;
@@ -124,6 +126,8 @@ export function OpenFileDialog():Promise<string>;
 export function OpenFileDialogFiltered(arg1:string,arg2:string,arg3:string):Promise<string>;
 
 export function OpenMultipleFilesDialog():Promise<Array<string>>;
+
+export function PickSerialLogSavePath(arg1:string):Promise<string>;
 
 export function RDPHide(arg1:string):Promise<void>;
 
@@ -228,6 +232,8 @@ export function SessionWriteBinary(arg1:string,arg2:string):Promise<void>;
 export function SetMonitorActiveTab(arg1:string,arg2:string):Promise<void>;
 
 export function SetMonitorPaused(arg1:string,arg2:boolean):Promise<void>;
+
+export function SetSerialLogEnabled(arg1:string,arg2:boolean,arg3:string):Promise<string>;
 
 export function SftpCancelTransfer(arg1:string,arg2:string):Promise<void>;
 

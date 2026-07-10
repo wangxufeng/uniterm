@@ -55,6 +55,8 @@ type App struct {
 	chatCancel           context.CancelFunc // active stream cancellation
 	chatCancelMu         stdsync.Mutex      // guards chatCancel
 	moveResizeCh         chan string        // defer EventsEmit from WndProc
+	logDirPrefMu         stdsync.Mutex      // guards lastSerialLogDir
+	lastSerialLogDir     string             // remembered dir for the next save dialog
 }
 
 func NewApp(webviewDataPath string) *App {
@@ -2403,6 +2405,122 @@ func (a *App) ConnectSerial(portName string, baudRate int, dataBits int, stopBit
 		Title:  s.Title(),
 		Status: s.Status(),
 	}, nil
+}
+
+// PickSerialLogSavePath opens a native Save dialog for the user to choose
+// where to save the serial session log. suggestedName is pre-filled as the
+// default filename (e.g. "COM3_2026-07-09_143012.log") so the user can just
+// confirm or type a new name. The dialog defaults to the directory used
+// last time, falling back to ~/.uniterm/serial-logs/.
+//
+// Returns the chosen full path, or "" if the user cancelled the dialog.
+func (a *App) PickSerialLogSavePath(suggestedName string) (string, error) {
+	a.logDirPrefMu.Lock()
+	lastDir := a.lastSerialLogDir
+	a.logDirPrefMu.Unlock()
+
+	defaultDir := lastDir
+	if defaultDir == "" {
+		var err error
+		defaultDir, err = defaultSerialLogDir()
+		if err != nil {
+			defaultDir = ""
+		}
+	}
+
+	chosen, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		Title:                "Save serial log as\u2026",
+		DefaultDirectory:     defaultDir,
+		DefaultFilename:      suggestedName,
+		CanCreateDirectories: true,
+		Filters: []runtime.FileFilter{
+			{DisplayName: "Log files (*.log)", Pattern: "*.log"},
+			{DisplayName: "Text files (*.txt)", Pattern: "*.txt"},
+			{DisplayName: "All files (*.*)", Pattern: "*.*"},
+		},
+	})
+	if err != nil {
+		return "", err
+	}
+	if chosen == "" {
+		return "", nil
+	}
+
+	// Remember the chosen dir for the next save dialog.
+	if dir := filepath.Dir(chosen); dir != "" {
+		a.logDirPrefMu.Lock()
+		a.lastSerialLogDir = dir
+		a.logDirPrefMu.Unlock()
+	}
+	return chosen, nil
+}
+
+// SetSerialLogEnabled toggles real-time I/O logging for a connected serial
+// session. When enabled, all RX/TX bytes are appended to the file at path
+// (typically the result of a native Save dialog from
+// PickSerialLogSavePath). When disabled, the open log file is closed cleanly
+// (a SYS footer is written) and no further data is captured.
+//
+// path is required to enable. Passing an empty path while enabled is
+// treated as a no-op (returns "", nil) so callers can pass through a
+// cancelled dialog result without special-casing.
+//
+// The session must be a serial session. Returns the current log file path
+// when enabling (empty if the log could not be created) and an empty string
+// when disabling.
+func (a *App) SetSerialLogEnabled(sessionID string, enabled bool, path string) (string, error) {
+	if a.sessionManager == nil {
+		return "", fmt.Errorf("session manager not initialized")
+	}
+	s, ok := a.sessionManager.Get(sessionID)
+	if !ok {
+		return "", fmt.Errorf("session not found: %s", sessionID)
+	}
+	serSess, ok := s.(*session.SerialSession)
+	if !ok {
+		return "", fmt.Errorf("session is not a serial session: %s", sessionID)
+	}
+	if !enabled {
+		serSess.StopLog()
+		return "", nil
+	}
+	if path == "" {
+		return "", nil
+	}
+	return serSess.StartLogAtPath(path), nil
+}
+
+// IsSerialLogEnabled reports whether the given session is currently writing
+// to a log file. Used by the UI to show the right menu label.
+func (a *App) IsSerialLogEnabled(sessionID string) bool {
+	if a.sessionManager == nil {
+		return false
+	}
+	s, ok := a.sessionManager.Get(sessionID)
+	if !ok {
+		return false
+	}
+	serSess, ok := s.(*session.SerialSession)
+	if !ok {
+		return false
+	}
+	return serSess.IsLogEnabled()
+}
+
+// defaultSerialLogDir returns the directory used to store serial session
+// logs. It is created if missing so the user can drop the right-click toggle
+// without any further interaction. The path lives under the user's home
+// directory next to other uniterm state.
+func defaultSerialLogDir() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	dir := filepath.Join(home, ".uniterm", "serial-logs")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return "", err
+	}
+	return dir, nil
 }
 
 // ── Database methods ──
