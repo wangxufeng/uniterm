@@ -3,7 +3,10 @@ package session
 import (
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"sync"
+	"time"
 
 	"go.bug.st/serial"
 )
@@ -23,6 +26,11 @@ type SerialSession struct {
 	config   SerialConfig
 	quit     chan struct{}
 	quitOnce sync.Once
+
+	logMu      sync.Mutex
+	logEnabled bool
+	logFile    *os.File
+	logPath    string
 }
 
 func NewSerialSession(id string) *SerialSession {
@@ -105,6 +113,72 @@ func (s *SerialSession) SetSerialConfig(cfg SerialConfig) {
 	s.config = cfg
 }
 
+func (s *SerialSession) StartLogAtPath(path string) string {
+	if path == "" {
+		return ""
+	}
+	if dir := filepath.Dir(path); dir != "." {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return ""
+		}
+	}
+
+	s.logMu.Lock()
+	defer s.logMu.Unlock()
+
+	if s.logFile != nil {
+		_ = s.logFile.Close()
+		s.logFile = nil
+	}
+
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	if err != nil {
+		return ""
+	}
+
+	s.logEnabled = true
+	s.logFile = f
+	s.logPath = path
+	_, _ = fmt.Fprintf(f, "\n=== Serial log started at %s ===\n", time.Now().Format(time.RFC3339))
+	_ = f.Sync()
+	return s.logPath
+}
+
+func (s *SerialSession) StopLog() {
+	s.logMu.Lock()
+	defer s.logMu.Unlock()
+
+	if s.logFile != nil {
+		_, _ = fmt.Fprintf(s.logFile, "\n=== Serial log stopped at %s ===\n", time.Now().Format(time.RFC3339))
+		_ = s.logFile.Sync()
+		_ = s.logFile.Close()
+		s.logFile = nil
+	}
+	s.logEnabled = false
+	s.logPath = ""
+}
+
+func (s *SerialSession) IsLogEnabled() bool {
+	s.logMu.Lock()
+	defer s.logMu.Unlock()
+	return s.logEnabled
+}
+
+func (s *SerialSession) logChunk(data []byte) {
+	if len(data) == 0 {
+		return
+	}
+
+	s.logMu.Lock()
+	defer s.logMu.Unlock()
+	if !s.logEnabled || s.logFile == nil {
+		return
+	}
+	if _, err := s.logFile.Write(data); err == nil {
+		_ = s.logFile.Sync()
+	}
+}
+
 func (s *SerialSession) readLoop() {
 	buf := make([]byte, 4096)
 	for {
@@ -118,7 +192,9 @@ func (s *SerialSession) readLoop() {
 				s.SetZmodemMode(true)
 				s.emitBinary(data)
 			} else {
-				s.emitData(normalizeNewlines(data))
+				normalized := normalizeNewlines(data)
+				s.logChunk(normalized)
+				s.emitData(normalized)
 			}
 		}
 		if err != nil {
@@ -147,6 +223,7 @@ func (s *SerialSession) Disconnect() error {
 		if s.port != nil {
 			s.port.Close()
 		}
+		s.StopLog()
 		s.setStatus(StatusDisconnected)
 	})
 	return nil
