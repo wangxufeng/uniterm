@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.4.0
+## v1.4.1
 
 ### What's Changed
 
@@ -24,6 +24,7 @@
 - RDP blank screen on modern Windows. Added NLA (Network Level Authentication) toggle — enabled by default using CredSSP for modern Windows; when disabled, uses RDP standard security with password field for auto-login.
 - Fixed system font names containing spaces (e.g. DejaVu Sans Mono, Fira Code) causing double-width character rendering in terminal due to CSS font-family parsing. (@surenwuyuwuqiu)
 - Fixed window geometry not being clamped and saving incorrectly when minimized, which could cause the next launch to restore an off-screen or minuscule window. Added `MinWidth=400, MinHeight=300` and skip geometry save while minimized.
+- Fixed database connection advanced configuration toggle not responding when creating or editing database connections. The SSH tunnel selector was incorrectly nested inside the FTP type template, causing it to not render for non-FTP connection types.
 
 Thanks to @surenwuyuwuqiu and @wangxufeng for their contributions to this release.
 
@@ -49,6 +50,7 @@ Thanks to @surenwuyuwuqiu and @wangxufeng for their contributions to this releas
 - 修复现代 Windows RDP 连接白屏问题。新增 NLA（网络级认证）开关 — 默认启用 CredSSP 兼容现代 Windows；关闭后使用 RDP 标准安全并显示密码字段用于自动登录。
 - 修复系统字体名含空格（如 DejaVu Sans Mono、Fira Code）时，CSS font-family 解析错误导致终端字符占双格、比例失调的问题。（@surenwuyuwuqiu）
 - 修复窗口无边界的尺寸和最小化时保存异常坐标导致的启动后窗口不可见或极小问题。新增 `MinWidth=400, MinHeight=300`，最小化时跳过保存窗口位置和尺寸。
+- 修复新建或编辑数据库连接时，高级配置按钮点击无效的问题。原因：SSH 隧道选择器被错误地嵌套在 FTP 类型模板内部，导致非 FTP 连接类型无法正常渲染。
 
 感谢 @surenwuyuwuqiu 和 @wangxufeng 对本版本的贡献。
 
