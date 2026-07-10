@@ -1,4 +1,5 @@
 <template>
+  <el-config-provider :locale="elLocale">
   <div class="app-container">
     <AppHeader
       @toggle-ai="aiStore.toggle"
@@ -58,9 +59,15 @@
               :session-id="getPanelSessionId(activeTab.panelId)"
               :host-name="getPanelConfig(activeTab.panelId)?.host || ''"
               :default-db-name="getPanelConfig(activeTab.panelId)?.dbName"
+              :db-type="getPanelConfig(activeTab.panelId)?.dbType || ''"
             />
             <RedisTabContent
               v-else-if="activeTab.type === 'redis'"
+              :key="activeTab.id"
+              :session-id="getPanelSessionId(activeTab.panelId) || ''"
+            />
+            <MongoDBTabContent
+              v-else-if="activeTab.type === 'mongodb'"
               :key="activeTab.id"
               :session-id="getPanelSessionId(activeTab.panelId) || ''"
             />
@@ -114,10 +121,20 @@
 
     <SyncConflictDialog />
   </div>
+  </el-config-provider>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted, provide } from 'vue'
+import zhCn from 'element-plus/es/locale/lang/zh-cn'
+import zhTw from 'element-plus/es/locale/lang/zh-tw'
+import enUs from 'element-plus/es/locale/lang/en'
+import ja from 'element-plus/es/locale/lang/ja'
+import ko from 'element-plus/es/locale/lang/ko'
+import de from 'element-plus/es/locale/lang/de'
+import es from 'element-plus/es/locale/lang/es'
+import fr from 'element-plus/es/locale/lang/fr'
+import ru from 'element-plus/es/locale/lang/ru'
 import AppHeader from './components/AppHeader.vue'
 import Sidebar from './components/Sidebar.vue'
 import TerminalTabContent from './components/TerminalTabContent.vue'
@@ -129,6 +146,7 @@ import VNCTabContent from './components/VNCTabContent.vue'
 import SPICETabContent from './components/SPICETabContent.vue'
 import DBTabContent from './components/DBTabContent.vue'
 import RedisTabContent from './components/RedisTabContent.vue'
+import MongoDBTabContent from './components/MongoDBTabContent.vue'
 import MonitorTabContent from './components/MonitorTabContent.vue'
 import StartTabContent from './components/StartTabContent.vue'
 import ConnectionForm from './components/ConnectionForm.vue'
@@ -163,7 +181,11 @@ const sessionStore = useSessionStore()
 const aiStore = useAIStore()
 const settingsStore = useSettingsStore()
 const updateCheck = useUpdateCheck()
-const { t } = useI18n()
+const { t, locale } = useI18n()
+const EL_LOCALE_MAP: Record<string, typeof enUs> = {
+  'zh-CN': zhCn, 'zh-TW': zhTw, en: enUs, ja, ko, de, es, fr, ru,
+}
+const elLocale = computed(() => EL_LOCALE_MAP[locale.value] || enUs)
 // ── RDP position sync ──
 // Called explicitly on tab switch and overlay restore; no polling needed.
 
@@ -685,7 +707,7 @@ async function closeTab(tabId: string) {
     }
   }
   // Close redis session
-  if (tab && tab.type === 'redis') {
+  if (tab && (tab.type === 'redis' || tab.type === 'mongodb')) {
     const p = panelStore.getPanel(tab.panelId)
     if (p?.sessionId) {
       try { await CloseSession(p.sessionId) } catch (_) {}
@@ -1146,12 +1168,21 @@ async function onConnectDB(config: ConnectionConfig, prevStart?: any) {
   if (reposition) reposition(tab.id)
   if (config.dbType === 'redis') {
     tab.type = 'redis' as any
+  } else if (config.dbType === 'mongodb') {
+    tab.type = 'mongodb' as any
   }
   panelStore.movePanelToTab(panel.id, tab.id)
   RecordRecentConnection(config.id)
 
   try {
-    const sessionType = config.dbType === 'redis' ? 'redis' : 'database'
+    let sessionType: string
+    if (config.dbType === 'redis') {
+      sessionType = 'redis'
+    } else if (config.dbType === 'mongodb') {
+      sessionType = 'mongodb'
+    } else {
+      sessionType = 'database'
+    }
     const info = await CreateSession(sessionType, config)
     panelStore.bindSession(panel.id, info.id)
     sessionStore.initSession(info.id)

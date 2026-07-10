@@ -110,6 +110,7 @@
                 <el-icon v-else-if="config.type === 'spice'"><MonitorCloud :size="28" /></el-icon>
                 <el-icon v-else-if="config.type === 'database'">
                   <DatabaseZap v-if="config.dbType === 'redis'" :size="28" />
+                  <Layers v-else-if="config.dbType === 'mongodb'" :size="28" />
                   <Database v-else :size="28" />
                 </el-icon>
                 <el-icon v-else><Server :size="28" /></el-icon>
@@ -193,6 +194,7 @@
                 <el-icon v-else-if="config.type === 'spice'"><MonitorCloud :size="28" /></el-icon>
                 <el-icon v-else-if="config.type === 'database'">
                   <DatabaseZap v-if="config.dbType === 'redis'" :size="28" />
+                  <Layers v-else-if="config.dbType === 'mongodb'" :size="28" />
                   <Database v-else :size="28" />
                 </el-icon>
                 <el-icon v-else><Server :size="28" /></el-icon>
@@ -376,7 +378,7 @@ import { useSettingsStore } from '../stores/settingsStore'
 import { useI18n } from '../i18n'
 import { GetRecentConnections } from '../../wailsjs/go/main/App'
 import { formatConnSubtitle } from '../utils/quickConnect'
-import { Filter, Plus, Laptop, Cable, SquareTerminal, Terminal, Database, DatabaseZap, Monitor, MonitorSmartphone, MonitorCloud, FolderUp, HardDrive, Cloud, Globe, Server, Folder, FolderOpen, Zap, MoreHorizontal } from '@lucide/vue'
+import { Filter, Plus, Laptop, Cable, SquareTerminal, Terminal, Database, DatabaseZap, Layers, Monitor, MonitorSmartphone, MonitorCloud, FolderUp, HardDrive, Cloud, Globe, Server, Folder, FolderOpen, Zap, MoreHorizontal } from '@lucide/vue'
 
 const props = defineProps<{
   tab: StartTab
@@ -453,6 +455,7 @@ const TYPE_LABELS: Record<string, string> = {
   local: 'Local', sftp: 'SFTP', ftp: 'FTP', smb: 'SMB', s3: 'S3', webdav: 'WebDAV', monitor: 'Monitor',
   'database:mysql': 'MySQL', 'database:postgres': 'PostgreSQL', 'database:rqlite': 'rqlite',
   'database:oracle': 'Oracle', 'database:sqlserver': 'SQL Server', 'database:redis': 'Redis',
+  'database:mongodb': 'MongoDB',
 }
 
 const availableTypes = computed(() => {

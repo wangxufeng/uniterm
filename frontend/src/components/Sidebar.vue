@@ -462,7 +462,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
-import { X, ChevronRight, ChevronDown, Filter, Check, Network, Zap, Clock, Plus, Palette, SquareTerminal, Terminal, FolderUp, HardDrive, Cloud, Globe, Monitor, MonitorCloud, MonitorSmartphone, Database, DatabaseZap, Activity, Laptop, Cable, Pencil, MoreHorizontal, ArrowRightLeft } from '@lucide/vue'
+import { X, ChevronRight, ChevronDown, Filter, Check, Network, Zap, Clock, Plus, Palette, SquareTerminal, Terminal, FolderUp, HardDrive, Cloud, Globe, Monitor, MonitorCloud, MonitorSmartphone, Database, DatabaseZap, Layers, Activity, Laptop, Cable, Pencil, MoreHorizontal, ArrowRightLeft } from '@lucide/vue'
 import { ElMessageBox } from 'element-plus'
 import { msg } from '../services/message'
 import { useConnectionStore } from '../stores/connectionStore'
@@ -556,6 +556,7 @@ const TYPE_LABELS: Record<string, string> = {
   'database:oracle': 'Oracle',
   'database:sqlserver': 'SQL Server',
   'database:redis': 'Redis',
+  'database:mongodb': 'MongoDB',
 }
 
 const availableTypes = computed<TypeOption[]>(() => {
@@ -1467,7 +1468,7 @@ function connIcon(conn: ConnectionConfig) {
     case 'rdp': return Monitor
     case 'vnc': return MonitorSmartphone
     case 'spice': return MonitorCloud
-    case 'database': return conn.dbType === 'redis' ? DatabaseZap : Database
+    case 'database': return conn.dbType === 'redis' ? DatabaseZap : conn.dbType === 'mongodb' ? Layers : Database
     case 'monitor': return Activity
     default: return SquareTerminal
   }

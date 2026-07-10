@@ -222,6 +222,62 @@ export function ModifyColumn(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['ModifyColumn'](arg1, arg2, arg3, arg4);
 }
 
+export function MongoCreateCollection(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MongoCreateCollection'](arg1, arg2, arg3);
+}
+
+export function MongoCreateIndex(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['main']['App']['MongoCreateIndex'](arg1, arg2, arg3, arg4, arg5, arg6);
+}
+
+export function MongoDeleteOne(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['MongoDeleteOne'](arg1, arg2, arg3, arg4);
+}
+
+export function MongoDropCollection(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MongoDropCollection'](arg1, arg2, arg3);
+}
+
+export function MongoDropDatabase(arg1, arg2) {
+  return window['go']['main']['App']['MongoDropDatabase'](arg1, arg2);
+}
+
+export function MongoDropIndex(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['MongoDropIndex'](arg1, arg2, arg3, arg4);
+}
+
+export function MongoFind(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['main']['App']['MongoFind'](arg1, arg2, arg3, arg4, arg5, arg6);
+}
+
+export function MongoGetDocument(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['MongoGetDocument'](arg1, arg2, arg3, arg4);
+}
+
+export function MongoInsertOne(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['MongoInsertOne'](arg1, arg2, arg3, arg4);
+}
+
+export function MongoListCollections(arg1, arg2) {
+  return window['go']['main']['App']['MongoListCollections'](arg1, arg2);
+}
+
+export function MongoListDatabases(arg1) {
+  return window['go']['main']['App']['MongoListDatabases'](arg1);
+}
+
+export function MongoListIndexes(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MongoListIndexes'](arg1, arg2, arg3);
+}
+
+export function MongoPing(arg1) {
+  return window['go']['main']['App']['MongoPing'](arg1);
+}
+
+export function MongoUpdateOne(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['MongoUpdateOne'](arg1, arg2, arg3, arg4, arg5);
+}
+
 export function OnConnectionsChanged(arg1) {
   return window['go']['main']['App']['OnConnectionsChanged'](arg1);
 }

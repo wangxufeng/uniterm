@@ -90,7 +90,7 @@ import { useI18n } from '../i18n'
 import { CreateSession, SetSerialLogEnabled, IsSerialLogEnabled, PickSerialLogSavePath } from '../../wailsjs/go/main/App'
 import { msg } from '../services/message'
 import type { TerminalTab, SettingsTab, SFTPTab, RDPTab, VNCTab, SPICETab, DBTab, MonitorTab, WorkspaceTab } from '../types/workspace'
-import { SquareTerminal, Laptop, FolderUp, HardDrive, Cloud, Globe, Monitor, MonitorCloud, MonitorSmartphone, Settings, Sparkles, Database, DatabaseZap, Activity, Terminal, Zap, X, ArrowDownUp, LayoutDashboard, Cable, SquarePlus } from '@lucide/vue'
+import { SquareTerminal, Laptop, FolderUp, HardDrive, Cloud, Globe, Monitor, MonitorCloud, MonitorSmartphone, Settings, Sparkles, Database, DatabaseZap, Layers, Activity, Terminal, Zap, X, ArrowDownUp, LayoutDashboard, Cable, SquarePlus } from '@lucide/vue'
 
 const props = defineProps<{
   tab: TerminalTab | SettingsTab | SFTPTab | RDPTab | VNCTab | SPICETab | DBTab | MonitorTab | WorkspaceTab
@@ -129,9 +129,10 @@ const tabIcon = computed(() => {
   if (t.type === 'rdp') return Monitor
   if (t.type === 'vnc') return MonitorSmartphone
   if (t.type === 'spice') return MonitorCloud
-  if (t.type === 'database') {
+  if (t.type === 'database' || t.type === 'mongodb') {
     const panel = panelStore.getPanel(t.panelId)
     if (panel?.config?.dbType === 'redis') return DatabaseZap
+    if (panel?.config?.dbType === 'mongodb') return Layers
     return Database
   }
   if (t.type === 'monitor') return Activity
