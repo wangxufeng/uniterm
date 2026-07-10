@@ -52,9 +52,11 @@ func main() {
 	}
 
 	err := wails.Run(&options.App{
-		Title:  "uniTerm",
-		Width:  1200,
+		Title:     "uniTerm",
+		Width:     1200,
 		Height:    800,
+		MinWidth:  400,
+		MinHeight: 300,
 		MaxWidth:  maxW,
 		MaxHeight: maxH,
 		Frameless: runtime.GOOS != "darwin",

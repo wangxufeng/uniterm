@@ -58,6 +58,7 @@ import {
   WindowMaximise,
   WindowUnmaximise,
   WindowIsMaximised,
+  WindowIsMinimised,
   WindowSetMaxSize,
   WindowGetPosition,
   WindowGetSize,
@@ -137,6 +138,9 @@ let saveTimer: ReturnType<typeof setTimeout> | null = null
 
 async function saveWindowState() {
   try {
+    // Do not save geometry when minimised — the position is off-screen
+    // and the size is the tiny taskbar thumbnail.
+    if (await WindowIsMinimised()) return
     const maxed = await WindowIsMaximised()
     const { x, y } = await WindowGetPosition()
     const { w, h } = await WindowGetSize()

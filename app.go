@@ -190,6 +190,12 @@ func (a *App) saveWindowStateFromRuntime() {
 	if a.localStateStore == nil {
 		return
 	}
+	// Do not save geometry when minimised — the position is off-screen
+	// (-32000, -32000 on Windows) and the size is the tiny taskbar thumbnail,
+	// which would restore incorrectly.
+	if runtime.WindowIsMinimised(a.ctx) {
+		return
+	}
 	ls, err := a.localStateStore.Load()
 	if err != nil {
 		return
