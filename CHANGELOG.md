@@ -14,6 +14,7 @@
 - AI sidebar toolbar optimized: send/stop replaced with icon buttons, model/mode selectors use ghost style, avatars removed with wider message layout, markdown rendered in `<p>` tags.
 - AI user cancellation now shows a friendly "interrupted" hint instead of raw "API Error: context canceled".
 - New and edit connection forms: host and port merged into a single row for a cleaner layout.
+- Sidebar group collapse state is now persisted and restored across operations, no longer lost when creating or deleting a connection group.
 
 **Bug Fixes**
 - RDP blank screen on modern Windows. Added NLA (Network Level Authentication) toggle — enabled by default using CredSSP for modern Windows; when disabled, uses RDP standard security with password field for auto-login.
@@ -33,6 +34,7 @@ Thanks to @surenwuyuwuqiu for their contributions to this release.
 - AI 侧边栏工具栏优化：发送/停止改为图标按钮，模型/模式选择器使用 ghost 样式，移除头像并拓宽消息布局，markdown 用 `<p>` 标签包裹。
 - AI 用户取消操作时显示友好的"已中断"提示，而非原始的 "API Error: context canceled"。
 - 连接新建和编辑表单主机与端口合并为单行，布局更简洁。
+- 侧边栏分组折叠状态持久化，新建或删除分组时不再丢失折叠状态。
 
 **Bug 修复**
 - 修复现代 Windows RDP 连接白屏问题。新增 NLA（网络级认证）开关 — 默认启用 CredSSP 兼容现代 Windows；关闭后使用 RDP 标准安全并显示密码字段用于自动登录。
