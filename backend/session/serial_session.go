@@ -71,12 +71,29 @@ func (s *SerialSession) Connect(config ConnectionConfig) error {
 // normalizeNewlines converts lone \r to \r\n so that carriage returns
 // from serial devices produce proper line breaks in the terminal.
 // \r\n sequences are kept as-is.
+// Special cases: when \r is followed by another \r (double Enter)
+// or when \r is at end of data (trailing Enter), don't add extra \n
+// to avoid extra blank lines on empty command echo.
 func normalizeNewlines(data []byte) []byte {
 	out := make([]byte, 0, len(data)+16)
 	for i := 0; i < len(data); i++ {
 		b := data[i]
-		if b == '\r' && (i+1 >= len(data) || data[i+1] != '\n') {
-			out = append(out, '\r', '\n')
+		if b == '\r' {
+			// Check if followed by \n (keep as-is)
+			if i+1 < len(data) && data[i+1] == '\n' {
+				out = append(out, b)
+			} else if i+1 < len(data) && data[i+1] == '\r' {
+				// Double \r (double Enter): just pass through, don't add extra newline
+				// This avoids the extra blank line when user presses Enter on empty prompt
+				out = append(out, b)
+			} else if i+1 >= len(data) {
+				// Trailing \r at end of data: this is likely an empty Enter
+				// Don't convert to avoid extra blank line from echo
+				out = append(out, b)
+			} else {
+				// Lone \r not at end, convert to \r\n
+				out = append(out, '\r', '\n')
+			}
 		} else {
 			out = append(out, b)
 		}
