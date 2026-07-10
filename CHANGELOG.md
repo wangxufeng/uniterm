@@ -1,5 +1,45 @@
 # Changelog
 
+## v1.4.0-alpha
+
+### What's Changed
+
+**New Features**
+- SSH Tunnel Manager with 3 forwarding modes: Local (-L), Remote (-R), and Dynamic (-D, SOCKS5). Tunnels are listed in a dedicated sidebar tab with status indicators, grouped by drag-and-drop, and support auto-start on launch. (@surenwuyuwuqiu)
+- AI message queue. Messages can now be sent while the AI agent is running or awaiting confirmation. Queued messages are shown as removable chips above the input and are processed at the next turn boundary of the agent loop.
+
+**Improvements**
+- Ctrl+scroll wheel now adjusts terminal font size (±1px, range 8–32px), persisted to settings. (@surenwuyuwuqiu)
+- AI command end detection now strips ANSI from captured prompts and uses an idle heuristic for dynamic prompts, improving reliability.
+- AI sidebar toolbar optimized: send/stop replaced with icon buttons, model/mode selectors use ghost style, avatars removed with wider message layout, markdown rendered in `<p>` tags.
+- AI user cancellation now shows a friendly "interrupted" hint instead of raw "API Error: context canceled".
+- New and edit connection forms: host and port merged into a single row for a cleaner layout.
+
+**Bug Fixes**
+- RDP blank screen on modern Windows. Added NLA (Network Level Authentication) toggle — enabled by default using CredSSP for modern Windows; when disabled, uses RDP standard security with password field for auto-login.
+- Fixed system font names containing spaces (e.g. DejaVu Sans Mono, Fira Code) causing double-width character rendering in terminal due to CSS font-family parsing. (@surenwuyuwuqiu)
+
+Thanks to @surenwuyuwuqiu for their contributions to this release.
+
+### 更新内容
+
+**新功能**
+- SSH 隧道管理器，支持三种转发模式：本地转发 (-L)、远程转发 (-R) 和动态转发 (-D, SOCKS5)。隧道在侧边栏独立标签页中展示，带状态指示灯，支持拖拽分组、启动时自动启动。（@surenwuyuwuqiu）
+- AI 消息队列。AI 运行中或等待确认时仍可发送消息，待处理消息显示为可移除的标签条，在 agent 循环的下一轮边界自动注入处理。
+
+**改进**
+- Ctrl+滚轮调整终端字体大小（±1px，范围 8–32px），设置自动持久化。（@surenwuyuwuqiu）
+- AI 命令结束检测优化：从捕获的提示符中剥离 ANSI 转义序列，并为动态提示符增加空闲启发式检测，提升判断可靠性。
+- AI 侧边栏工具栏优化：发送/停止改为图标按钮，模型/模式选择器使用 ghost 样式，移除头像并拓宽消息布局，markdown 用 `<p>` 标签包裹。
+- AI 用户取消操作时显示友好的"已中断"提示，而非原始的 "API Error: context canceled"。
+- 连接新建和编辑表单主机与端口合并为单行，布局更简洁。
+
+**Bug 修复**
+- 修复现代 Windows RDP 连接白屏问题。新增 NLA（网络级认证）开关 — 默认启用 CredSSP 兼容现代 Windows；关闭后使用 RDP 标准安全并显示密码字段用于自动登录。
+- 修复系统字体名含空格（如 DejaVu Sans Mono、Fira Code）时，CSS font-family 解析错误导致终端字符占双格、比例失调的问题。（@surenwuyuwuqiu）
+
+感谢 @surenwuyuwuqiu 对本版本的贡献。
+
 ## v1.3.3
 
 ### What's Changed
