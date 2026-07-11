@@ -40,3 +40,5 @@ docs/superpowers/
 /package-lock.json
 designs/
 /design.md
+docs/articles/
+docker/

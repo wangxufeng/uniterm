@@ -35,6 +35,7 @@ const sidebarZh = [
     items: [
       { text: 'AI 助理', link: '/zh/features/ai-assistant' },
       { text: '标签和工作区', link: '/zh/features/workspace' },
+      { text: 'SSH 隧道', link: '/zh/features/ssh-tunnel' },
       { text: '云同步', link: '/zh/features/sync' },
       { text: '智能提示', link: '/zh/features/smart-suggest' },
       { text: '个性化', link: '/zh/features/personalization' }
@@ -79,6 +80,7 @@ const sidebarEn = [
     items: [
       { text: 'AI Assistant', link: '/en/features/ai-assistant' },
       { text: 'Workspace', link: '/en/features/workspace' },
+      { text: 'SSH Tunnel', link: '/en/features/ssh-tunnel' },
       { text: 'Cloud Sync', link: '/en/features/sync' },
       { text: 'Smart Suggestions', link: '/en/features/smart-suggest' },
       { text: 'Personalization', link: '/en/features/personalization' }

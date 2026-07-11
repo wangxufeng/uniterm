@@ -23,6 +23,8 @@
 | 12 | `terminal_settings.png` | `terminal_settings_light.png` | Terminal appearance settings |
 | 13 | `workspace.png` | `workspace_light.png` | Workspace with multiple panels |
 | 14 | `zmodem.png` | `zmodem_light.png` | Zmodem file transfer progress |
+| 15 | `mongodb.png` | `mongodb_light.png` | MongoDB database browser |
+| 16 | `ssh_tunnel.png` | `ssh_tunnel_light.png` | SSH tunnel manager |
 
 ## Static assets
 

@@ -107,6 +107,8 @@ Redis 提供键值数据浏览和管理功能。
 
 MongoDB 提供文档数据库浏览、查询和行内文档编辑功能。
 
+![MongoDB](/imgs/mongodb_light.png)
+
 ### 连接参数
 
 | 参数 | 说明 |
