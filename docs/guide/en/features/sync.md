@@ -2,7 +2,7 @@
 
 Encrypted synchronization of uniTerm settings through your own private Git repository — no centralized server required, and your data security is fully under your control.
 
-![Cloud Sync](/imgs/cloud_sync_light.png)
+![Cloud Sync](/imgs/cloud_sync_light.webp)
 
 ## Quick Setup
 

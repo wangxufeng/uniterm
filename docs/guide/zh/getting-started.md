@@ -29,7 +29,7 @@ tar xzf uniterm.linux-amd64.tar.gz
 
 1. 打开 uniTerm，点击左侧边栏的 **+** 按钮，或点击"新建连接"卡片。
 
-   ![新建连接](/imgs/new_connection_light.png)
+   ![新建连接](/imgs/new_connection_light.webp)
 
 2. 在弹出的新建连接对话框中，选择协议类型（例如 **SSH**），填写连接信息：
    - **名称**：给连接起一个易识别的名字

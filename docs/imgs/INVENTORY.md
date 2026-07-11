@@ -2,32 +2,32 @@
 
 ## Naming convention
 
-- `*_light.png` — light theme
-- `*.png` — dark theme (no suffix)
+- `*_light.webp` — light theme
+- `*.webp` — dark theme (no suffix)
 
 ## Screenshot list
 
 | # | Dark | Light | Description |
 |---|------|-------|-------------|
-| 1 | `ai_assistant.png` | `ai_assistant_light.png` | AI assistant sidebar conversation |
-| 2 | `ai_model.png` | `ai_model_light.png` | AI model configuration page |
-| 3 | `auto_complete.png` | `auto_complete_light.png` | Terminal smart completion popup |
-| 4 | `cloud_sync.png` | `cloud_sync_light.png` | Git cloud sync settings |
-| 5 | `database.png` | `database_light.png` | Database browser (tables, query) |
-| 6 | `new_connection.png` | `new_connection_light.png` | New connection dialog |
-| 7 | `rdp.png` | `rdp_light.png` | RDP remote desktop session |
-| 8 | `redis.png` | `redis_light.png` | Redis key-value browser |
-| 9 | `shortcuts.png` | `shortcuts_light.png` | Keyboard shortcuts settings |
-| 10 | `sftp.png` | `sftp_light.png` | SFTP dual-pane file transfer |
-| 11 | `start_tab.png` | `start_tab_light.png` | Start page / new tab with cards |
-| 12 | `terminal_settings.png` | `terminal_settings_light.png` | Terminal appearance settings |
-| 13 | `workspace.png` | `workspace_light.png` | Workspace with multiple panels |
-| 14 | `zmodem.png` | `zmodem_light.png` | Zmodem file transfer progress |
-| 15 | `mongodb.png` | `mongodb_light.png` | MongoDB database browser |
-| 16 | `ssh_tunnel.png` | `ssh_tunnel_light.png` | SSH tunnel manager |
+| 1 | `ai_assistant.webp` | `ai_assistant_light.webp` | AI assistant sidebar conversation |
+| 2 | `ai_model.webp` | `ai_model_light.webp` | AI model configuration page |
+| 3 | `auto_complete.webp` | `auto_complete_light.webp` | Terminal smart completion popup |
+| 4 | `cloud_sync.webp` | `cloud_sync_light.webp` | Git cloud sync settings |
+| 5 | `database.webp` | `database_light.webp` | Database browser (tables, query) |
+| 6 | `new_connection.webp` | `new_connection_light.webp` | New connection dialog |
+| 7 | `rdp.webp` | `rdp_light.webp` | RDP remote desktop session |
+| 8 | `redis.webp` | `redis_light.webp` | Redis key-value browser |
+| 9 | `shortcuts.webp` | `shortcuts_light.webp` | Keyboard shortcuts settings |
+| 10 | `sftp.webp` | `sftp_light.webp` | SFTP dual-pane file transfer |
+| 11 | `start_tab.webp` | `start_tab_light.webp` | Start page / new tab with cards |
+| 12 | `terminal_settings.webp` | `terminal_settings_light.webp` | Terminal appearance settings |
+| 13 | `workspace.webp` | `workspace_light.webp` | Workspace with multiple panels |
+| 14 | `zmodem.webp` | `zmodem_light.webp` | Zmodem file transfer progress |
+| 15 | `mongodb.webp` | `mongodb_light.webp` | MongoDB database browser |
+| 16 | `ssh_tunnel.webp` | `ssh_tunnel_light.webp` | SSH tunnel manager |
 
 ## Static assets
 
 | File | Purpose |
 |------|---------|
-| `appicon.png` | Application icon |
+| `appicon.webp` | Application icon |

@@ -13,7 +13,7 @@ uniTerm 是一款轻量级全能终端模拟器，支持 **20+** 种连接协议
 
 通过密码或密钥认证连接 **SSH** 服务器，支持 SSH 隧道端口转发，任何连接都能通过 SSH 跳板机路由。同时支持 **Telnet** 和 **Mosh**（适合高延迟、间歇性网络环境）。
 
-![新建连接](/imgs/new_connection_light.png)
+![新建连接](/imgs/new_connection_light.webp)
 
 #### 本地与串口终端
 
@@ -23,19 +23,19 @@ uniTerm 是一款轻量级全能终端模拟器，支持 **20+** 种连接协议
 
 内置 **SFTP / FTP / FTPS / SMB / WebDAV / S3** 双栏文件浏览器，支持 **Zmodem**（`rz`/`sz`）在 SSH 终端中直接传输文件。
 
-![SFTP](/imgs/sftp_light.png)
+![SFTP](/imgs/sftp_light.webp)
 
 #### 远程桌面
 
 集成 **RDP**（Windows 远程桌面）、**VNC**（Linux 远程控制）和 **SPICE**（KVM/QEMU 虚拟机）协议，提供流畅的图形化远程桌面体验。
 
-![RDP](/imgs/rdp_light.png)
+![RDP](/imgs/rdp_light.webp)
 
 #### 数据库客户端
 
 支持 **MySQL / PostgreSQL / Oracle / SQL Server / rqlite / Redis**，在终端内直接浏览表结构和执行查询。
 
-![数据库](/imgs/database_light.png)
+![数据库](/imgs/database_light.webp)
 
 
 ### AI 助理
@@ -49,7 +49,7 @@ uniTerm 内置自主 AI Agent，可在终端中独立规划并执行多轮 Shell
 - **终端内集成** — AI 命令直接在活动终端标签页中执行，可固定到特定标签页或始终跟随活动标签页。
 - **智能补全** — 在 SSH 终端中输入时，从命令历史和 AI 中获得实时建议。
 
-![AI 助理](/imgs/ai_assistant_light.png)
+![AI 助理](/imgs/ai_assistant_light.webp)
 
 
 ### 个性化
@@ -62,13 +62,13 @@ uniTerm 内置自主 AI Agent，可在终端中独立规划并执行多轮 Shell
 
 将终端标签页拖放至内容区域自由分栏，组合为工作区；拖动面板边缘调整大小和排列。
 
-![工作区](/imgs/workspace_light.png)
+![工作区](/imgs/workspace_light.webp)
 
 #### 云同步
 
 通过您自己的 GitHub / GitLab / Gitee 私有仓库加密同步设置，无需担心数据丢失或泄露，跨设备无缝衔接。
 
-![云同步](/imgs/cloud_sync_light.png)
+![云同步](/imgs/cloud_sync_light.webp)
 
 #### 自定义快捷键
 
@@ -78,7 +78,7 @@ uniTerm 内置自主 AI Agent，可在终端中独立规划并执行多轮 Shell
 
 **28** 款终端主题 + **3** 款界面主题（Dark / Deep Blue / Light）。
 
-![终端设置](/imgs/terminal_settings_light.png)
+![终端设置](/imgs/terminal_settings_light.webp)
 
 #### 多语言
 

@@ -2,7 +2,7 @@
 
 When typing in the terminal, uniTerm provides real-time completion suggestions to help you enter commands faster.
 
-![Smart Suggestions](/imgs/auto_complete_light.png)
+![Smart Suggestions](/imgs/auto_complete_light.webp)
 
 ## Smart Completion
 

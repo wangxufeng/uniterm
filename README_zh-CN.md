@@ -101,32 +101,32 @@ Oracle Database 支持基于纯 Go 驱动实现。uniTerm 不随安装包分发 
 
 <p align="center">
   <picture>
-    <source srcset="docs/imgs/start_tab.png" media="(prefers-color-scheme: dark)" />
-    <img src="docs/imgs/start_tab_light.png" alt="开始页" width="45%" loading="eager" />
+    <source srcset="docs/imgs/start_tab.webp" media="(prefers-color-scheme: dark)" />
+    <img src="docs/imgs/start_tab_light.webp" alt="开始页" width="45%" loading="eager" />
   </picture>
   <picture>
-    <source srcset="docs/imgs/new_connection.png" media="(prefers-color-scheme: dark)" />
-    <img src="docs/imgs/new_connection_light.png" alt="新建连接" width="45%" loading="eager" />
-  </picture>
-</p>
-<p align="center">
-  <picture>
-    <source srcset="docs/imgs/ai_assistant.png" media="(prefers-color-scheme: dark)" />
-    <img src="docs/imgs/ai_assistant_light.png" alt="SSH 终端与 AI 对话" width="45%" loading="eager" />
-  </picture>
-  <picture>
-    <source srcset="docs/imgs/workspace.png" media="(prefers-color-scheme: dark)" />
-    <img src="docs/imgs/workspace_light.png" alt="工作区" width="45%" loading="eager" />
+    <source srcset="docs/imgs/new_connection.webp" media="(prefers-color-scheme: dark)" />
+    <img src="docs/imgs/new_connection_light.webp" alt="新建连接" width="45%" loading="eager" />
   </picture>
 </p>
 <p align="center">
   <picture>
-    <source srcset="docs/imgs/sftp.png" media="(prefers-color-scheme: dark)" />
-    <img src="docs/imgs/sftp_light.png" alt="SFTP 文件传输" width="45%" loading="eager" />
+    <source srcset="docs/imgs/ai_assistant.webp" media="(prefers-color-scheme: dark)" />
+    <img src="docs/imgs/ai_assistant_light.webp" alt="SSH 终端与 AI 对话" width="45%" loading="eager" />
   </picture>
   <picture>
-    <source srcset="docs/imgs/database.png" media="(prefers-color-scheme: dark)" />
-    <img src="docs/imgs/database_light.png" alt="数据库浏览器" width="45%" loading="eager" />
+    <source srcset="docs/imgs/workspace.webp" media="(prefers-color-scheme: dark)" />
+    <img src="docs/imgs/workspace_light.webp" alt="工作区" width="45%" loading="eager" />
+  </picture>
+</p>
+<p align="center">
+  <picture>
+    <source srcset="docs/imgs/sftp.webp" media="(prefers-color-scheme: dark)" />
+    <img src="docs/imgs/sftp_light.webp" alt="SFTP 文件传输" width="45%" loading="eager" />
+  </picture>
+  <picture>
+    <source srcset="docs/imgs/database.webp" media="(prefers-color-scheme: dark)" />
+    <img src="docs/imgs/database_light.webp" alt="数据库浏览器" width="45%" loading="eager" />
   </picture>
 </p>
   </picture>

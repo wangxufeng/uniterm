@@ -57,7 +57,7 @@ Amazon S3 API-compatible object storage. Also supports MinIO, Alibaba Cloud OSS,
 
 Once connected, all protocols share the same file browser interface -- a dual-pane layout with the local filesystem on the left and the remote target on the right.
 
-![File Transfer](/imgs/sftp_light.png)
+![File Transfer](/imgs/sftp_light.webp)
 
 ### Dual-Pane Layout
 

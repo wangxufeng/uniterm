@@ -2,7 +2,7 @@
 
 通过您自己的私有 Git 仓库加密同步 uniTerm 设置，无需中心化服务器，数据安全完全由您掌控。
 
-![云同步](/imgs/cloud_sync_light.png)
+![云同步](/imgs/cloud_sync_light.webp)
 
 
 ## 快速配置

@@ -43,7 +43,7 @@ The Expect/Send pattern supports interactive login automation by defining matchi
 
 In an SSH terminal, you can directly use the `rz` (receive files) and `sz` (send files) commands to transfer files without opening the file browser. Drag-and-drop from the desktop to the terminal window for direct upload is also supported.
 
-![Zmodem](/imgs/zmodem_light.png)
+![Zmodem](/imgs/zmodem_light.webp)
 
 ### SSH Terminal Tab Operations
 

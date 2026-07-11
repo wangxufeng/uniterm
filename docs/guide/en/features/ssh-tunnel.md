@@ -2,7 +2,7 @@
 
 uniTerm has a built-in SSH Tunnel Manager that supports three forwarding modes. You can create, manage, and monitor multiple tunnel connections.
 
-![SSH Tunnel](/imgs/ssh_tunnel_light.png)
+![SSH Tunnel](/imgs/ssh_tunnel_light.webp)
 
 ## Tunnel Manager
 

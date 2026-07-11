@@ -2,7 +2,7 @@
 
 uniTerm has a built-in autonomous AI Agent that can independently plan and execute multiple rounds of Shell commands in the terminal.
 
-![AI Assistant](/imgs/ai_assistant_light.png)
+![AI Assistant](/imgs/ai_assistant_light.webp)
 
 ## Core Capabilities
 
@@ -19,7 +19,7 @@ The AI Agent will:
 
 Supports Anthropic and OpenAI-compatible APIs. You can add multiple models and switch between them at any time.
 
-![AI Model Settings](/imgs/ai_model_light.png)
+![AI Model Settings](/imgs/ai_model_light.webp)
 
 **Model Configuration Fields:**
 

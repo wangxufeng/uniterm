@@ -32,7 +32,7 @@ Supports 9 interface languages. Changes take effect immediately without restart:
 
 Adjust the terminal's appearance and behavior in the "Terminal" settings tab.
 
-![Terminal Settings](/imgs/terminal_settings_light.png)
+![Terminal Settings](/imgs/terminal_settings_light.webp)
 
 ### Color Schemes
 
@@ -74,6 +74,6 @@ When enabled, automatically highlights content such as timestamps, IP addresses,
 
 uniTerm supports customizable keyboard shortcuts.
 
-![Shortcuts Settings](/imgs/shortcuts_light.png)
+![Shortcuts Settings](/imgs/shortcuts_light.webp)
 
 In Settings → Shortcuts, search or browse all bindable actions. Click an action and then press the desired key combination to complete the binding. Supports single keys and key combinations (including `Ctrl` / `Alt` / `Shift` / `Meta`).

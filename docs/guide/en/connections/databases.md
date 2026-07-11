@@ -4,7 +4,7 @@ uniTerm has a built-in database client that supports mainstream relational datab
 
 ## Relational Databases
 
-![Database](/imgs/database_light.png)
+![Database](/imgs/database_light.webp)
 
 ### Supported Databases
 
@@ -67,7 +67,7 @@ Double-click a table name to enter. The left tree panel displays column informat
 
 Redis provides key-value data browsing and management.
 
-![Redis](/imgs/redis_light.png)
+![Redis](/imgs/redis_light.webp)
 
 ### Connection Parameters
 
@@ -107,7 +107,7 @@ The context menu provides the following operations:
 
 MongoDB provides document database browsing, querying, and inline document editing.
 
-![MongoDB](/imgs/mongodb_light.png)
+![MongoDB](/imgs/mongodb_light.webp)
 
 ### Connection Parameters
 

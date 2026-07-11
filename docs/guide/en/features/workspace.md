@@ -2,7 +2,7 @@
 
 uniTerm manages multiple connections through tabs and displays multiple terminals side by side through workspaces.
 
-![Workspace](/imgs/workspace_light.png)
+![Workspace](/imgs/workspace_light.webp)
 
 ## Tabs
 

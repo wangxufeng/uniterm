@@ -4,7 +4,7 @@ uniTerm 内置数据库客户端，支持主流关系型数据库、Redis 和 Mo
 
 ## 关系型数据库
 
-![数据库](/imgs/database_light.png)
+![数据库](/imgs/database_light.webp)
 
 ### 支持的数据库
 
@@ -67,7 +67,7 @@ uniTerm 内置数据库客户端，支持主流关系型数据库、Redis 和 Mo
 
 Redis 提供键值数据浏览和管理功能。
 
-![Redis](/imgs/redis_light.png)
+![Redis](/imgs/redis_light.webp)
 
 ### 连接参数
 
@@ -107,7 +107,7 @@ Redis 提供键值数据浏览和管理功能。
 
 MongoDB 提供文档数据库浏览、查询和行内文档编辑功能。
 
-![MongoDB](/imgs/mongodb_light.png)
+![MongoDB](/imgs/mongodb_light.webp)
 
 ### 连接参数
 

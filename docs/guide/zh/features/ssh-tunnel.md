@@ -2,7 +2,7 @@
 
 uniTerm 内置 SSH 隧道管理器，支持三种转发模式，可创建、管理和监控多个隧道连接。
 
-![SSH 隧道](/imgs/ssh_tunnel_light.png)
+![SSH 隧道](/imgs/ssh_tunnel_light.webp)
 
 ## 隧道管理器
 

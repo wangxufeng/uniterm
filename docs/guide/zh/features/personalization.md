@@ -34,7 +34,7 @@ uniTerm 提供丰富的个性化选项，让终端符合您的使用习惯和审
 
 在「终端」标签页中可调整终端的外观和行为。
 
-![终端设置](/imgs/terminal_settings_light.png)
+![终端设置](/imgs/terminal_settings_light.webp)
 
 ### 配色方案
 
@@ -77,6 +77,6 @@ uniTerm 提供丰富的个性化选项，让终端符合您的使用习惯和审
 
 uniTerm 支持自定义快捷键。
 
-![快捷键设置](/imgs/shortcuts_light.png)
+![快捷键设置](/imgs/shortcuts_light.webp)
 
 在设置 → 快捷键中，搜索或浏览所有可绑定操作，点击后按下目标组合键即可完成绑定。支持单键和组合键（含 `Ctrl` / `Alt` / `Shift` / `Meta`）。

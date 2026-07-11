@@ -2,7 +2,7 @@
 
 在终端输入时，uniTerm 提供实时补全建议，帮助您更快地输入命令。
 
-![智能提示](/imgs/auto_complete_light.png)
+![智能提示](/imgs/auto_complete_light.webp)
 
 ## 智能补全
 

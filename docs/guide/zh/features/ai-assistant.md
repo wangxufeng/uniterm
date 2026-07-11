@@ -2,7 +2,7 @@
 
 uniTerm 内置自主 AI Agent，可在终端中独立规划并执行多轮 Shell 命令。
 
-![AI 助理](/imgs/ai_assistant_light.png)
+![AI 助理](/imgs/ai_assistant_light.webp)
 
 ## 核心能力
 
@@ -19,7 +19,7 @@ AI Agent 会：
 
 支持 Anthropic 和 OpenAI 兼容 API，可添加多个模型并在使用中随时切换。
 
-![AI 模型设置](/imgs/ai_model_light.png)
+![AI 模型设置](/imgs/ai_model_light.webp)
 
 **模型配置字段：**
 

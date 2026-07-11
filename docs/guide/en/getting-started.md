@@ -29,7 +29,7 @@ tar xzf uniterm.linux-amd64.tar.gz
 
 1. Open uniTerm, click the **+** button in the left sidebar, or click the "New Connection" card.
 
-   ![New Connection](/imgs/new_connection_light.png)
+   ![New Connection](/imgs/new_connection_light.webp)
 
 2. In the New Connection dialog, select the protocol type (e.g., **SSH**) and fill in the connection details:
    - **Name**: Give the connection an easily recognizable name

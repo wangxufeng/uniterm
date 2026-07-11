@@ -2,7 +2,7 @@
 
 开始页是 uniTerm 启动后默认显示的页面，提供快速访问入口。关闭所有标签页后也会自动打开。
 
-![开始页](/imgs/start_tab_light.png)
+![开始页](/imgs/start_tab_light.webp)
 
 ## 搜索与快速连接
 

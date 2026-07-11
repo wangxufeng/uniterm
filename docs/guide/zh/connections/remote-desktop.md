@@ -8,7 +8,7 @@ RDP（Remote Desktop Protocol）是 Windows 系统内置的远程桌面协议。
 
 > 仅支持 Windows 版本客户端，macOS 和 Linux 版本该功能隐藏。使用系统内置的远程桌面控件。
 
-![RDP](/imgs/rdp_light.png)
+![RDP](/imgs/rdp_light.webp)
 
 ### 连接参数
 

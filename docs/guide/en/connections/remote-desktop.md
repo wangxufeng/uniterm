@@ -8,7 +8,7 @@ RDP (Remote Desktop Protocol) is the built-in remote desktop protocol of Windows
 
 > Only supported on Windows clients. This feature is hidden on macOS and Linux versions. Uses the system's built-in Remote Desktop control.
 
-![RDP](/imgs/rdp_light.png)
+![RDP](/imgs/rdp_light.webp)
 
 ### Connection Parameters
 
