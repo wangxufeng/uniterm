@@ -143,9 +143,9 @@ jobs:
           for arch in amd64 arm64; do
             cd build/bin
             mkdir -p ../../dist_tmp
-            cp uniTerm-${arch}.exe ../../dist_tmp/
+            cp uniTerm-${arch}.exe ../../dist_tmp/uniTerm.exe
             cd ../..
-            (cd dist_tmp && zip -q ../uniterm-windows-${arch}-portable-${VERSION}.zip uniTerm-${arch}.exe)
+            (cd dist_tmp && zip -q ../uniterm-windows-${arch}-portable-${VERSION}.zip uniTerm.exe)
             rm -rf dist_tmp
           done
 
