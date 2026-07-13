@@ -1,5 +1,41 @@
 # Changelog
 
+## v1.4.2-alpha
+
+### What's Changed
+
+**New Features**
+- Default local shell setting. Users can now configure the preferred shell (e.g. Git Bash, PowerShell, CMD) for local terminal sessions in Settings, instead of relying on the auto-detection fallback order.
+- Linux ARM64 builds and DEB/RPM packaging. New build targets for Linux ARM64 with native `.deb` and `.rpm` package artifacts.
+- Windows ARM64 build target.
+- Package manager support. uniTerm is now available via Scoop (Windows), Homebrew (macOS/Linux), Winget (Windows), and Chocolatey (Windows) with automated update workflows.
+
+**Improvements**
+- Local terminal now defaults to the user's home directory instead of the application directory on Windows. New sessions correctly start in `$HOME`.
+
+**Bug Fixes**
+- Fixed raw OS pipe error message ("The pipe has been ended.") shown when a TUI application (e.g. opencode) exits without cleaning up on Windows ConPTY. Read errors after session shutdown are now silently suppressed.
+- Fixed default macOS Edit and Window menus appearing as empty dropdowns. An empty app menu is now set to hide them.
+- Fixed RDP connection type appearing on macOS and Linux where it is not supported. RDP is now only shown on Windows.
+- Fixed smart suggestion selection being reset by a race condition between keyboard navigation and the debounced suggestion refresh timer.
+
+### 更新内容
+
+**新功能**
+- 默认本地终端 Shell 设置。用户可在设置中配置本地终端会话的首选 Shell（如 Git Bash、PowerShell、CMD）。
+- Linux ARM64 构建与 DEB/RPM 打包。新增 Linux ARM64 构建目标，提供原生 `.deb` 和 `.rpm` 安装包。
+- Windows ARM64 构建目标。
+- 包管理器支持。uniTerm 现已上架 Scoop（Windows）、Homebrew（macOS/Linux）、Winget（Windows）和 Chocolatey（Windows），并提供自动化更新工作流。
+
+**改进**
+- Windows 本地终端默认工作目录改为用户主目录，新会话从 `$HOME` 启动。
+
+**Bug 修复**
+- 修复 Windows ConPTY 下 TUI 应用（如 opencode）退出时未清理终端状态，导致显示原始 OS 管道错误信息（"The pipe has been ended."）的问题。会话关闭后的读取错误现在会被静默忽略。
+- 修复 macOS 默认 Edit 和 Window 菜单显示为空下拉的问题。设置空菜单以隐藏它们。
+- 修复 RDP 连接类型在 macOS 和 Linux 上显示的问题（RDP 仅 Windows 支持）。
+- 修复智能提示选择因键盘导航与防抖刷新计时器之间的竞态条件而被重置的问题。
+
 ## v1.4.1
 
 ### What's Changed
