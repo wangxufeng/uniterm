@@ -36,8 +36,7 @@ jobs:
       - name: Update formula
         run: |
           sed -i "s/version \".*\"/version \"$VERSION\"/" Casks/uniterm.rb
-          sed -i "s/sha256 arm:.*/sha256 arm:   \"$SHA256\"/" Casks/uniterm.rb
-          sed -i "s/    intel:.*/     intel: \"$SHA256\"/" Casks/uniterm.rb
+          sed -i "s/sha256 \".*\"/sha256 \"$SHA256\"/" Casks/uniterm.rb
 
       - name: Commit and push
         run: |
