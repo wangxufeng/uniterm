@@ -1,8 +1,8 @@
 name: Update Chocolatey
 
 on:
-  # release:  # disabled to avoid re-queuing Chocolatey moderation
-  #   types: [published]
+  release:
+    types: [published]
   workflow_dispatch:
     inputs:
       tag:
