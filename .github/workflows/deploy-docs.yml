@@ -49,6 +49,8 @@ jobs:
           cp -r docs/imgs _site/imgs
           cp docs/CNAME _site/CNAME 2>/dev/null || true
           cp docs/.nojekyll _site/.nojekyll 2>/dev/null || true
+          # License page
+          cp -r docs/license _site/license
           # VitePress output goes under /guide/
           cp -r docs/guide/.vitepress/dist _site/guide
 
