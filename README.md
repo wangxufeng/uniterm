@@ -154,6 +154,10 @@ brew install --cask ys-ll/uniterm/uniterm
 # Linux (deb)
 curl -sLo uniterm.deb https://github.com/ys-ll/uniterm/releases/latest/download/uniterm-linux-amd64-*.deb
 sudo dpkg -i uniterm.deb
+
+# Linux (rpm)
+curl -sLo uniterm.rpm https://github.com/ys-ll/uniterm/releases/latest/download/uniterm-linux-amd64-*.rpm
+sudo rpm -i uniterm.rpm
 ```
 
 ### Runtime Dependencies
