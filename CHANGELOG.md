@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.4.2-alpha
+## v1.4.2
 
 ### What's Changed
 
@@ -8,16 +8,26 @@
 - Default local shell setting. Users can now configure the preferred shell (e.g. Git Bash, PowerShell, CMD) for local terminal sessions in Settings, instead of relying on the auto-detection fallback order.
 - Linux ARM64 builds and DEB/RPM packaging. New build targets for Linux ARM64 with native `.deb` and `.rpm` package artifacts.
 - Windows ARM64 build target.
-- Package manager support. uniTerm is now available via Scoop (Windows), Homebrew (macOS/Linux), Winget (Windows), and Chocolatey (Windows) with automated update workflows.
+- Multi-level nested connection groups. Groups now support unlimited nesting depth with tree-based rendering, drag-to-reparent, breadcrumb navigation, and auto-rename on name conflict.
 
 **Improvements**
+- AI autonomous interaction rounds are now configurable. Set the max conversation turns per AI request in Settings (0 = unlimited, default 20).
+- Terminal search shortcut (Ctrl+F) is now configurable in the keyboard shortcuts settings and can be rebound or disabled.
+- Inactive tab hover now shows a close button, allowing single-click close without activating first.
 - Local terminal now defaults to the user's home directory instead of the application directory on Windows. New sessions correctly start in `$HOME`.
+- Protocol selector in AI model dialog changed from dropdown to toggle buttons for quicker switching.
+- AI sidebar model dropdown now includes an "Add Model" entry; shows "+ Add Model" button when no models are configured.
 
 **Bug Fixes**
 - Fixed raw OS pipe error message ("The pipe has been ended.") shown when a TUI application (e.g. opencode) exits without cleaning up on Windows ConPTY. Read errors after session shutdown are now silently suppressed.
 - Fixed default macOS Edit and Window menus appearing as empty dropdowns. An empty app menu is now set to hide them.
 - Fixed RDP connection type appearing on macOS and Linux where it is not supported. RDP is now only shown on Windows.
 - Fixed smart suggestion selection being reset by a race condition between keyboard navigation and the debounced suggestion refresh timer.
+- Fixed paste via Wails clipboard and added bracketed paste support, so pasting into vim no longer re-indents each line. Cmd/Ctrl+V now pastes correctly in WKWebView. (@surenwuyuwuqiu)
+- Fixed SSH disconnect when full-screen apps (vim/less/tmux) query the terminal in alternate screen. Terminal query responses are now filtered in both screens, preventing stray ESC sequences from being forwarded to the remote app. (@surenwuyuwuqiu)
+- Fixed model form dialog not clearing state between edits: clicking "Add Model" after editing now correctly creates a new model instead of updating the previous one, and test connection results no longer carry over across different model edits.
+
+Thanks to @surenwuyuwuqiu for contributions to this release.
 
 ### 更新内容
 
@@ -25,16 +35,26 @@
 - 默认本地终端 Shell 设置。用户可在设置中配置本地终端会话的首选 Shell（如 Git Bash、PowerShell、CMD）。
 - Linux ARM64 构建与 DEB/RPM 打包。新增 Linux ARM64 构建目标，提供原生 `.deb` 和 `.rpm` 安装包。
 - Windows ARM64 构建目标。
-- 包管理器支持。uniTerm 现已上架 Scoop（Windows）、Homebrew（macOS/Linux）、Winget（Windows）和 Chocolatey（Windows），并提供自动化更新工作流。
+- 多级嵌套连接分组。分组支持无限层级嵌套，提供树状渲染、拖拽调整父子关系、面包屑导航，同层级名称冲突时自动重命名。
 
 **改进**
+- AI 自主交互最大轮次可配置。在设置中可调整单次 AI 请求的最大对话轮数（0 = 不限制，默认 20）。
+- 终端搜索快捷键（Ctrl+F）加入可配置快捷键列表，支持改绑或关闭。
+- 非激活标签 hover 时显示关闭按钮，无需先点击激活再关闭。
 - Windows 本地终端默认工作目录改为用户主目录，新会话从 `$HOME` 启动。
+- AI 模型编辑对话框中协议选择从下拉菜单改为 toggle 按钮，切换更快捷。
+- AI 边栏模型下拉菜单新增「添加模型」入口，无模型时显示「+ 添加模型」按钮。
 
 **Bug 修复**
 - 修复 Windows ConPTY 下 TUI 应用（如 opencode）退出时未清理终端状态，导致显示原始 OS 管道错误信息（"The pipe has been ended."）的问题。会话关闭后的读取错误现在会被静默忽略。
 - 修复 macOS 默认 Edit 和 Window 菜单显示为空下拉的问题。设置空菜单以隐藏它们。
 - 修复 RDP 连接类型在 macOS 和 Linux 上显示的问题（RDP 仅 Windows 支持）。
 - 修复智能提示选择因键盘导航与防抖刷新计时器之间的竞态条件而被重置的问题。
+- 修复终端粘贴通过 Wails 剪贴板实现，新增 bracketed paste 支持，粘贴到 vim 不再逐行缩进。Cmd/Ctrl+V 在 WKWebView 下正常粘贴。（@surenwuyuwuqiu）
+- 修复全屏应用（vim/less/tmux）在交替屏幕中查询终端时导致 SSH 断开的问题。终端查询响应现在在两个屏幕中均被过滤，防止 stray ESC 序列被转发到远程应用。（@surenwuyuwuqiu）
+- 修复模型编辑表单在编辑和新建之间状态未清除的问题：编辑后点击新建不再更新旧模型，测试连接结果也不会在不同模型之间串扰。
+
+感谢 @surenwuyuwuqiu 对本版本的贡献。
 
 ## v1.4.1
 
