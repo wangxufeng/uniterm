@@ -88,6 +88,8 @@
   "tab.closeLeft": "Close Tabs to the Left",
   "tab.closeOther": "Close Other Tabs",
   "tab.close": "Close",
+  "tab.closeConfirmTitle": "Close Confirmation",
+  "tab.closeConnectedConfirm": "This tab has an active connection. Closing it will disconnect. Are you sure?",
   "tab.more": "More Tabs",
   "terminal.duplicate": "Duplicate",
   "terminal.more": "More",
