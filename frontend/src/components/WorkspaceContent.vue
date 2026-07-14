@@ -25,10 +25,13 @@ defineOptions({ name: 'WorkspaceContent' })
 
 import { useTabStore } from '../stores/tabStore'
 import { usePanelStore } from '../stores/panelStore'
+import { useSessionStore } from '../stores/sessionStore'
 import type { WorkspaceTab } from '../types/workspace'
 import type { ConnectionConfig } from '../types/session'
 import PanelGrid from './PanelGrid.vue'
-import { CreateSession } from '../../wailsjs/go/main/App'
+import { CreateSession, CloseSession } from '../../wailsjs/go/main/App'
+import { ElMessageBox } from 'element-plus'
+import { useI18n } from '../i18n'
 
 const props = defineProps<{
   tab: WorkspaceTab
@@ -36,9 +39,26 @@ const props = defineProps<{
 
 const tabStore = useTabStore()
 const panelStore = usePanelStore()
+const sessionStore = useSessionStore()
+const { t } = useI18n()
 
-function closePanel(panelId: string) {
+async function closePanel(panelId: string) {
   const panel = panelStore.getPanel(panelId)
+  const connected = !!panel?.sessionId && sessionStore.getStatus(panel.sessionId) === 'connected'
+  if (connected) {
+    try {
+      await ElMessageBox.confirm(
+        t('tab.closeConnectedConfirm'),
+        t('tab.closeConfirmTitle'),
+        { confirmButtonText: t('tab.close'), cancelButtonText: t('conn.cancel'), type: 'warning' }
+      )
+    } catch {
+      return
+    }
+  }
+  if (panel?.sessionId) {
+    try { await CloseSession(panel.sessionId) } catch (_) {}
+  }
   tabStore.removePanelFromWorkspaceTab(props.tab.id, panelId)
   if (panel) {
     panelStore.removePanel(panel.id)

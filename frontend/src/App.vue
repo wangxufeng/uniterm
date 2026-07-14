@@ -156,6 +156,7 @@ import SyncConflictDialog from './components/SyncConflictDialog.vue'
 import SerialConnectDialog from './components/SerialConnectDialog.vue'
 import CredentialPrompt from './components/CredentialPrompt.vue'
 import type { CredentialResult } from './components/CredentialPrompt.vue'
+import { ElMessageBox } from 'element-plus'
 import { useConnectionStore } from './stores/connectionStore'
 import { useTabStore } from './stores/tabStore'
 import { usePanelStore } from './stores/panelStore'
@@ -679,6 +680,26 @@ async function closeTab(tabId: string) {
       }
     })
     return
+  }
+  // Confirm before closing connected sessions to prevent accidental disconnect
+  if (tab && tab.type !== 'settings') {
+    const panelIds = tab.type === 'workspace' ? tab.panelIds : 'panelId' in tab ? [tab.panelId] : []
+    const hasConnected = panelIds.some(pid => {
+      const p = panelStore.getPanel(pid)
+      if (!p?.sessionId) return false
+      return sessionStore.getStatus(p.sessionId) === 'connected'
+    })
+    if (hasConnected) {
+      try {
+        await ElMessageBox.confirm(
+          t('tab.closeConnectedConfirm'),
+          t('tab.closeConfirmTitle'),
+          { confirmButtonText: t('tab.close'), cancelButtonText: t('conn.cancel'), type: 'warning' }
+        )
+      } catch {
+        return
+      }
+    }
   }
   if (tab && tab.type === 'rdp') {
     const p = panelStore.getPanel(tab.panelId)
