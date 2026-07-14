@@ -151,6 +151,15 @@ let intersectionObserver: IntersectionObserver | null = null
 // Track how many sessionStore chunks have been written to the terminal
 // so we can replay only missed data on KeepAlive reactivation.
 let writtenChunks = 0
+// Viewport position (top line in the buffer) captured on KeepAlive
+// deactivation so reactivation can restore the user's scroll position
+// instead of jumping to the bottom. baseY at deactivation is also kept so
+// we can tell whether the user was scrolled to the bottom before
+// deactivation — if they were, new output during the inactive period
+// (replayed on activation) should pull the viewport down to the new
+// bottom; otherwise the viewport stays where the user left it.
+let savedViewportY: number | null = null
+let savedBaseY: number | null = null
 let unsubscribe: (() => void) | null = null
 let statusUnsubscribe: (() => void) | null = null
 let onDocumentMouseDown: ((e: MouseEvent) => void) | null = null
@@ -1258,14 +1267,50 @@ onActivated(() => {
   }
   // Re-register onData/keyHandler listeners that were disposed in onDeactivated.
   bindListeners?.()
+  // Restore the user's scroll position captured on deactivation BEFORE
+  // resize. resize() triggers viewport.syncScrollArea → _innerRefresh
+  // which reads ydisp and writes scrollTop. We must keep ydisp and the
+  // DOM scrollTop in sync — wheel events compute the next ydisp from
+  // scrollTop, so a mismatch (e.g. ydisp = 100 but scrollTop = 0 after
+  // the element was moved out of a display:none holding container)
+  // breaks scroll-up/scroll-down.
+  //
+  // We can't rely solely on scrollToLine() because it only updates ydisp;
+  // the DOM scrollTop stays at 0 (or whatever the browser left it at)
+  // until _innerRefresh runs with a valid viewport height. resize() bails
+  // when the container has zero size, which is the case right after
+  // KeepAlive activation before layout settles. So we do three things:
+  //   1. scrollToLine(target) to restore ydisp immediately.
+  //   2. If rowHeight is known, also set scrollTop directly so the
+  //      viewport shows the right content from the first paint — no
+  //      flash to position 0.
+  //   3. retry resize() a few times; once layout settles and resize()
+  //      succeeds, _innerRefresh writes scrollTop = ydisp * rowHeight,
+  //      which matches what we set in step 2, so it is a no-op.
+  // If no position was saved, leave the viewport alone — the natural
+  // _innerRefresh path during resize lands on the bottom.
+  if (savedViewportY != null && savedBaseY != null) {
+    const probeBuf = terminal?.buffer?.active as { baseY?: number; length?: number } | undefined
+    if (probeBuf && typeof probeBuf.baseY === 'number' && typeof probeBuf.length === 'number') {
+      const wasAtBottom = savedViewportY >= savedBaseY - 1
+      const target = wasAtBottom ? probeBuf.baseY : Math.min(savedViewportY, probeBuf.length - 1)
+      terminal?.scrollToLine(target)
+      const vp = terminal?.element?.querySelector('.xterm-viewport') as HTMLElement | null
+      const core = (terminal as any)?._core
+      const rowHeight: number = core?.viewport?._currentRowHeight ?? 0
+      if (vp && rowHeight > 0) {
+        vp.scrollTop = target * rowHeight
+      }
+    }
+  }
   // Terminal dimensions may be stale after tab switch; recalculate.
+  // resize() bails when rect is 0×0 — common right after KeepAlive
+  // activation before layout settles — so retry a few times. Each retry
+  // that succeeds will run _innerRefresh which writes scrollTop from the
+  // restored ydisp; once scrollTop matches the desired value, the next
+  // _innerRefresh is a no-op.
   resize()
-  // Ensure viewport is at the bottom after reactivation so scroll wheel
-  // state is consistent — stale scrollTop from deactivation can cause
-  // mouse wheel to misbehave (scroll up broken, scroll down jumps to top).
-  nextTick(() => {
-    terminal?.scrollToBottom()
-  })
+  ;[0, 50, 150, 300, 600].forEach(d => setTimeout(resize, d))
   // Re-initialize zmodem service only if it was disposed in onDeactivated.
   // If a transfer was active, the service is still running — skip recreate.
   // safe: no focus() call here, avoids WebView2 crash race with native dialogs.
@@ -1281,6 +1326,16 @@ onDeactivated(() => {
   // Component deactivated by KeepAlive (e.g. terminal tab moved into workspace).
   // Mark inactive so session event handlers become no-ops.
   isActive.value = false
+  // Capture viewport position before listeners are torn down so reactivation
+  // can restore the user's scroll position. Reading from the public IBuffer
+  // API avoids depending on internal _core field shape.
+  const buf = terminal?.buffer?.active as { viewportY?: number; baseY?: number } | undefined
+  if (buf && typeof buf.viewportY === 'number') {
+    savedViewportY = buf.viewportY
+  }
+  if (buf && typeof buf.baseY === 'number') {
+    savedBaseY = buf.baseY
+  }
   // Dispose per-component listeners to prevent duplicate input when another
   // BaseTerminal mounts with the same shared terminal instance.
   onDataDispose?.dispose()
@@ -1310,6 +1365,9 @@ watch(() => props.sessionId, (newId, oldId) => {
   // Reset write tracking when session changes so onActivated replay
   // starts from the correct offset for the new session.
   writtenChunks = 0
+  // Reset saved scroll position — the new sessionId has a different buffer.
+  savedViewportY = null
+  savedBaseY = null
   if (newId && (props.mode === 'ssh' || props.mode === 'local')) {
     initZmodemService(newId)
     terminal = getManagedTerminal(newId)?.terminal ?? null
