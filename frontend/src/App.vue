@@ -167,6 +167,7 @@ import { useQuickCommandStore } from './stores/quickCommandStore'
 import { useTunnelStore } from './stores/tunnelStore'
 import { useUpdateCheck } from './composables/useUpdateCheck'
 import { loadKeybindings, installGlobalListener, uninstallGlobalListener } from './composables/useKeyboardShortcuts'
+import { focusPanelTerminal } from './composables/useFocusPanel'
 import type { ShortcutAction } from './types/settings'
 import { useI18n } from './i18n'
 import { CreateSession, CloseSession, RDPHide, RDPShow, RDPSetPosition, RDPSetFocus, LoadLocalState, SaveLocalState, RecordRecentConnection } from '../wailsjs/go/main/App'
@@ -227,6 +228,7 @@ function rdpResetTracking() {
 // Reference-counted: nesting works correctly across multiple concurrent triggers.
 const rdpOverlayCount = ref(0)
 let rdpRestoreTimer: ReturnType<typeof setTimeout> | null = null
+let isWindowDragging = false
 
 function RDPHideForOverlay() {
 	rdpOverlayCount.value++
@@ -556,18 +558,31 @@ onMounted(async () => {
   window.addEventListener('global:close-context-menus', closeInputMenu)
   document.addEventListener('click', closeInputMenu)
   document.addEventListener('wheel', onWheel, { passive: false })
-  // WKWebView doesn't forward Cmd+A/C/V on input/textarea/contenteditable — handle globally.
-  document.addEventListener('keydown', onEditShortcut)
+  // Restore xterm focus when it falls off the textarea without landing on an
+  // interactive element (resize drag, macOS title-bar drag, incidental clicks).
+  function onTerminalFocusOut(e: FocusEvent) {
+    const target = e.target as HTMLElement
+    if (!target.classList.contains('xterm-helper-textarea')) return
+    const related = e.relatedTarget as HTMLElement | null
+    if (related && related.tabIndex >= 0) return
+    const panel = target.closest('[data-panel-id]') as HTMLElement | null
+    const pid = panel?.getAttribute('data-panel-id')
+    if (pid) nextTick(() => focusPanelTerminal(pid))
+  }
+  document.addEventListener('focusout', onTerminalFocusOut, true)
   // Keyboard shortcuts — load once on mount, watch for settings changes
   applyKeybindings()
   installGlobalListener()
 
   // RDP blur/focus: notify Go side so it can manage focus on the native RDP window
+  // Skip during window drag to avoid losing RDP focus
   window.addEventListener('blur', () => {
+    if (isWindowDragging) return
     const sid = getActiveRdpSessionId()
     if (sid) RDPSetFocus(sid, false)
   })
   window.addEventListener('focus', () => {
+    if (isWindowDragging) return
     const sid = getActiveRdpSessionId()
     if (sid) RDPSetFocus(sid, true)
   })
@@ -577,9 +592,18 @@ onMounted(async () => {
   window.addEventListener('split:resize-start', RDPHideForOverlay)
   window.addEventListener('split:resize-end', RDPShowForOverlay)
   window.addEventListener('rdp:sync-position', rdpResetTracking)
-  // Go-side WndProc events: window move/resize start/end
-  EventsOn('rdp:move-resize-start', () => RDPHideForOverlay())
-  EventsOn('rdp:move-resize-end', () => RDPShowForOverlay())
+  // Go-side WndProc events: window move/resize start/end (Windows)
+  EventsOn('rdp:move-resize-start', () => { isWindowDragging = true; RDPHideForOverlay() })
+  EventsOn('rdp:move-resize-end', () => {
+    isWindowDragging = false
+    RDPShowForOverlay()
+    // WebView2 loses xterm textarea focus during window drag; restore it.
+    // Defer past RDPShow's setTimeout (150ms) so the textarea exists.
+    const tab = activeTab.value
+    if (!tab) return
+    const pid = tab.type === 'workspace' ? (tab.activePanelId || tab.panelIds[0]) : ('panelId' in tab ? tab.panelId : null)
+    if (pid) setTimeout(() => focusPanelTerminal(pid), 200)
+  })
 
   // Panel/Tab/StartTab menu actions
   window.addEventListener('app:connect-sftp', ((e: CustomEvent) => {
@@ -615,15 +639,7 @@ onMounted(async () => {
 
 })
 
-function focusPanelTerminal(panelId: string, attempt = 0) {
-  if (attempt > 10) return
-  const el = document.querySelector(`[data-panel-id="${panelId}"] .xterm-helper-textarea`)
-  if (el instanceof HTMLTextAreaElement) {
-    el.focus()
-  } else {
-    setTimeout(() => focusPanelTerminal(panelId, attempt + 1), 100)
-  }
-}
+
 
 function navigatePanel(dir: number) {
   const t = tabStore.activeTab
@@ -727,6 +743,7 @@ onUnmounted(() => {
   window.removeEventListener('global:close-context-menus', closeInputMenu)
   document.removeEventListener('click', closeInputMenu)
   document.removeEventListener('wheel', onWheel)
+  document.removeEventListener('focusout', onTerminalFocusOut, true)
   // RDP overlay tracking
   window.removeEventListener('rdp:overlay-push', RDPHideForOverlay)
   window.removeEventListener('rdp:overlay-pop', RDPShowForOverlay)

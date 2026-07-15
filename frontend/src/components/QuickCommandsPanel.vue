@@ -231,7 +231,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import {
   Plus, Play, Clipboard, Copy,
   ChevronDown, ChevronRight
@@ -240,6 +240,7 @@ import { useQuickCommandStore, type QuickCommand, type QuickCommandGroup } from 
 import { useTabStore } from '../stores/tabStore'
 import { usePanelStore } from '../stores/panelStore'
 import { SessionWrite } from '../../wailsjs/go/main/App'
+import { focusPanelTerminal } from '../composables/useFocusPanel'
 import { useI18n } from '../i18n'
 import { msg } from '../services/message'
 import QuickCommandEditDialog from './QuickCommandEditDialog.vue'
@@ -415,6 +416,8 @@ async function sendCommand(cmd: QuickCommand, mode: 'run' | 'paste') {
       if (i < lines.length - 1) await new Promise(r => setTimeout(r, 100))
     }
   }
+  const pid = tabStore.getActivePanelId()
+  if (pid) nextTick(() => focusPanelTerminal(pid))
 }
 
 function runCommand(cmd: QuickCommand) { sendCommand(cmd, 'run') }

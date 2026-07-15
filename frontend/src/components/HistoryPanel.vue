@@ -69,13 +69,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { Play, Clipboard, Copy } from '@lucide/vue'
 import { useSuggestions, type HistoryEntry } from '../composables/useSuggestions'
 import { useTabStore } from '../stores/tabStore'
 import { usePanelStore } from '../stores/panelStore'
 import { useQuickCommandStore } from '../stores/quickCommandStore'
 import { SessionWrite } from '../../wailsjs/go/main/App'
+import { focusPanelTerminal } from '../composables/useFocusPanel'
 import { useI18n } from '../i18n'
 import { msg } from '../services/message'
 import QuickCommandEditDialog from './QuickCommandEditDialog.vue'
@@ -216,6 +217,7 @@ function runCommand(entry: HistoryEntry) {
   for (const sid of sids) {
     SessionWrite(sid, text)
   }
+  restoreTerminalFocus()
 }
 
 function pasteCommand(entry: HistoryEntry) {
@@ -224,6 +226,12 @@ function pasteCommand(entry: HistoryEntry) {
   for (const sid of sids) {
     SessionWrite(sid, entry.command)
   }
+  restoreTerminalFocus()
+}
+
+function restoreTerminalFocus() {
+  const pid = tabStore.getActivePanelId()
+  if (pid) nextTick(() => focusPanelTerminal(pid))
 }
 
 async function copyCommand(entry: HistoryEntry) {
