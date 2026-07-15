@@ -408,11 +408,10 @@ async function sendCommand(cmd: QuickCommand, mode: 'run' | 'paste') {
       SessionWrite(sid, cmd.command)
       continue
     }
-    let text = cmd.command
-    if (!text.endsWith('\n')) text += '\n'
+    const text = cmd.command.replace(/\r\n?/g, '\n')
     const lines = text.split('\n').filter(l => l.length > 0)
     for (let i = 0; i < lines.length; i++) {
-      SessionWrite(sid, lines[i] + '\n')
+      SessionWrite(sid, lines[i] + '\r')
       if (i < lines.length - 1) await new Promise(r => setTimeout(r, 100))
     }
   }
