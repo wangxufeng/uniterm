@@ -10,6 +10,7 @@ import { EventsOn, BrowserOpenURL } from '../../wailsjs/runtime'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useSessionStore } from '../stores/sessionStore'
 import { highlight } from './useHighlight'
+import { stripCursorBlink } from '../utils/cursor'
 import type { CustomTerminalTheme } from '../types/settings'
 
 export interface UseTerminalOptions {
@@ -344,11 +345,16 @@ export function useTerminal(
       fontSize: ts.fontSize || 13,
       fontFamily: ts.fontFamily || 'Consolas, "Courier New", monospace',
       theme: getXtermTheme(themeName, settingsStore.settings.customTerminalThemes),
-      cursorBlink: true,
+      cursorBlink: ts.cursorBlink ?? true,
       rightClickSelectsWord: false,
       scrollback: ts.maxHistoryLines || 2500,
       allowProposedApi: true
     }
+  }
+
+  // Wrap stripCursorBlink with current blink setting for convenience
+  function stripBlink(data: string): string {
+    return stripCursorBlink(data, settingsStore.settings.terminal.cursorBlink ?? true)
   }
 
   function resize() {
@@ -508,7 +514,7 @@ export function useTerminal(
         // Apply syntax highlighting when restoring history so it matches
         // newly arriving lines after a tab switch.
         const hlOn = settingsStore.settings.terminal.highlightEnabled ?? true
-        terminal.write(hlOn ? highlight(history) : history)
+        terminal.write(hlOn ? highlight(stripBlink(history)) : stripBlink(history))
       }
     }
 
@@ -565,7 +571,7 @@ export function useTerminal(
         // Filter ED3 (erase scrollback). For ED2 (clear screen), replace with
         // newline scrolling + home so that current viewport content is pushed
         // into scrollback before clearing, matching standard terminal behavior.
-        let data = payload.data.replace(/\x1b\[3J/g, '')
+        let data = stripBlink(payload.data).replace(/\x1b\[3J/g, '')
         if (data.includes('\x1b[2J')) {
           const rows = terminal.rows
           const scrollClear = '\n'.repeat(rows) + '\x1b[H'
@@ -643,7 +649,7 @@ export function useTerminal(
       // Restore buffered session data that arrived before bindSession
       const history = sessionStore.getData(newId)
       if (history) {
-        terminal.write(history)
+        terminal.write(stripBlink(history))
       }
       // Retry resize multiple times with longer delays to ensure backend Connect is ready
       const delays = [200, 400, 600, 800, 1000, 1500, 2000]
@@ -660,6 +666,10 @@ export function useTerminal(
     if (ts.fontFamily) terminal.options.fontFamily = ts.fontFamily
     if (ts.maxHistoryLines) terminal.options.scrollback = ts.maxHistoryLines
     if (ts.theme) terminal.options.theme = getXtermTheme(ts.theme, settingsStore.settings.customTerminalThemes)
+    if (typeof ts.cursorBlink === 'boolean') {
+      terminal.options.cursorBlink = ts.cursorBlink
+      if (!ts.cursorBlink) terminal.write('\x1b[?12l')
+    }
     resize()
   }, { deep: true })
 

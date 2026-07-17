@@ -3,6 +3,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import { Unicode11Addon } from '@xterm/addon-unicode11'
 import { SearchAddon } from '@xterm/addon-search'
 import { getXtermTheme } from '../composables/useTerminal'
+import { useSettingsStore } from '../stores/settingsStore'
 import type { CustomTerminalTheme } from '../types/settings'
 import { formatFontFamily } from '../utils/formatFontFamily'
 
@@ -64,11 +65,12 @@ export function acquireTerminal(
     }
     managed.isNew = false
   } else {
+    const cursorBlink = useSettingsStore().settings.terminal.cursorBlink ?? true
     const terminal = new Terminal({
       fontSize: options.fontSize ?? 13,
       fontFamily: formatFontFamily(options.fontFamily ?? 'Consolas, "Courier New", monospace'),
       theme: getXtermTheme(options.themeName ?? 'dark', customThemes),
-      cursorBlink: true,
+      cursorBlink,
       rightClickSelectsWord: false,
       scrollback: options.scrollback ?? 2500,
       allowProposedApi: true,

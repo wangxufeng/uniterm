@@ -313,6 +313,8 @@
   "settings.testFailed": "Connection failed",
   "settings.highlight": "Text Highlight",
   "settings.highlightDesc": "Highlight timestamps, IPs, keywords, strings, etc.",
+  "settings.cursorBlink": "Cursor Blink",
+  "settings.cursorBlinkDesc": "Whether the terminal cursor blinks",
   "settings.maxTurns": "Max Autonomous Rounds",
   "settings.maxTurnsDesc": "Maximum autonomous interaction rounds per AI request. Set to 0 for unlimited. Default 20.",
   "settings.modelList": "Model List",

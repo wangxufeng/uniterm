@@ -98,6 +98,7 @@ import {
   bumpOnDataGeneration,
 } from '../services/terminalManager'
 import { getXtermTheme } from '../composables/useTerminal'
+import { stripCursorBlink } from '../utils/cursor'
 import { useTerminalInput } from '../composables/useTerminalInput'
 import { useSuggestions, quickCommandCache } from '../composables/useSuggestions'
 import TerminalSuggestion from './TerminalSuggestion.vue'
@@ -1102,7 +1103,7 @@ onMounted(() => {
     }
 
     // Filter ED3 (erase scrollback).
-    let data = payload.data.replace(/\x1b\[3J/g, '')
+    let data = stripCursorBlink(payload.data, settingsStore.settings.terminal.cursorBlink ?? true).replace(/\x1b\[3J/g, '')
     // For ED2 (clear screen) in the main buffer, replace with scrolling
     // to preserve scrollback history. In alternate screen (vim, less,
     // k9s), pass through unchanged — the app manages its own screen.
@@ -1458,6 +1459,14 @@ watch(() => settingsStore.settings.terminal, (ts) => {
   if (ts.fontFamily) terminal.options.fontFamily = ts.fontFamily
   if (ts.maxHistoryLines) terminal.options.scrollback = ts.maxHistoryLines
   if (ts.theme) terminal.options.theme = getXtermTheme(ts.theme, settingsStore.settings.customTerminalThemes)
+  if (typeof ts.cursorBlink === 'boolean') {
+    terminal.options.cursorBlink = ts.cursorBlink
+    // xterm keeps an internal blink state set by DECSET 12; if the
+    // terminal previously received \x1b[?12h from a remote shell, just
+    // flipping the option may not stop the running blink animation.
+    // Force-reset by feeding the cursor a DECRST 12 sequence.
+    if (!ts.cursorBlink) terminal.write('\x1b[?12l')
+  }
   resize()
 }, { deep: true })
 

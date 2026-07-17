@@ -305,6 +305,8 @@
   "settings.testFailed": "Соединение не удалось",
   "settings.highlight": "Подсветка текста",
   "settings.highlightDesc": "Выделять метки времени, IP, ключевые слова, строки и т.д.",
+  "settings.cursorBlink": "Мигание курсора",
+  "settings.cursorBlinkDesc": "Должен ли мигать курсор терминала",
   "settings.maxTurns": "Макс. автономных раундов",
   "settings.maxTurnsDesc": "Максимальное количество автономных раундов взаимодействия на один запрос ИИ. 0 — без ограничений. По умолчанию: 20.",
   "settings.modelList": "Список моделей",

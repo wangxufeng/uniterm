@@ -240,6 +240,16 @@
             </div>
           </div>
 
+          <div class="setting-card">
+            <div class="setting-info">
+              <div class="setting-title">{{ t('settings.cursorBlink') }}</div>
+              <div class="setting-desc">{{ t('settings.cursorBlinkDesc') }}</div>
+            </div>
+            <div class="setting-control">
+              <el-switch :model-value="settingsStore.settings.terminal.cursorBlink ?? true" @update:model-value="(v: boolean) => { settingsStore.settings.terminal.cursorBlink = v; settingsStore.save() }" />
+            </div>
+          </div>
+
         </div>
       </div>
 

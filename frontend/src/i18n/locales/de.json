@@ -305,6 +305,8 @@
   "settings.testFailed": "Verbindung fehlgeschlagen",
   "settings.highlight": "Texthervorhebung",
   "settings.highlightDesc": "Zeitstempel, IPs, Schlüsselwörter, Strings usw. hervorheben",
+  "settings.cursorBlink": "Cursor blinken",
+  "settings.cursorBlinkDesc": "Ob der Terminal-Cursor blinkt",
   "settings.maxTurns": "Max. autonome Runden",
   "settings.maxTurnsDesc": "Maximale Anzahl autonomer Interaktionsrunden pro KI-Anfrage. 0 = unbegrenzt. Standard: 20.",
   "settings.modelList": "Modellliste",

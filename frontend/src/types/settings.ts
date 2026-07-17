@@ -51,6 +51,7 @@ export interface TerminalSettings {
   maxHistoryLines: number
   smartCompletion: boolean
   highlightEnabled: boolean
+  cursorBlink: boolean
 }
 
 export interface AIModelConfig {
@@ -161,7 +162,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
     middleClickAction: 'paste',
     maxHistoryLines: 2500,
     smartCompletion: true,
-    highlightEnabled: true
+    highlightEnabled: true,
+    cursorBlink: true
   },
   ai: {
     maxTurns: 20,
