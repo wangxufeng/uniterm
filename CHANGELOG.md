@@ -1,5 +1,73 @@
 # Changelog
 
+## v1.5.0
+
+### What's Changed
+
+**New Features**
+- Multi-panel AI lock. AI can now control multiple terminals at once, each shown with its own tag. Type `#<tag>` in the AI prompt to reference a specific terminal.
+- AI `ask_user` tool. AI can now ask the user a question mid-run and wait for a reply before continuing, useful for confirmations and clarifications during autonomous runs.
+- Session output log for terminal connections. Toggle recording from the workspace panel menu; a red REC dot on the panel header indicates an active recording. Logs are written to the configured session log directory.
+- SSH passphrase-protected private keys are now supported.
+- Configurable terminal cursor blink, default on. (@wangxufeng)
+- Confirm before closing tabs/panels with active connections, with a "don't show again" option. (@wangxufeng)
+- Tab lock. Right-click a tab to lock it, preventing accidental close and marking it with a lock indicator.
+- Duplicate tab action extended to SFTP and database tabs (previously terminal-only).
+
+**Improvements**
+- AI tool chain: added completion markers, `start_command` risk control, and `collect_output` idle detection.
+- WebDAV connections now use a single URL field instead of separate host / port / SSL toggle.
+- Broadcast input per-panel selection: Ctrl+click panel headers to include only the selected panels when broadcasting keyboard input.
+- Tab styling: minimum tab width, close / more / AI-lock buttons now appear only on hover, and duplicate local terminal names are deduplicated.
+- Sidebar Tunnels and QuickCommands panels no longer draw a divider between the search bar and list.
+- Default `openSettings` shortcut bound to Ctrl+, (Cmd+, on macOS via alias). (@surenwuyuwuqiu)
+
+**Bug Fixes**
+- Fixed paste via Wails clipboard and added Cmd+A / Cmd+C / Cmd+V shortcuts for WKWebView. (@surenwuyuwuqiu)
+- Fixed quick command auto-run using LF as line terminator; switched to CR so multi-line commands run reliably. (@wangxufeng)
+- Fixed terminal scroll position not being restored after KeepAlive reactivation. (@wangxufeng)
+- Fixed WebDAV `ChangeRemoteDir` failing on servers whose `Stat` on a directory does not return the expected metadata; switched to `ReadDir`.
+- Fixed edits not being persisted when using Save & Connect for non-terminal connection types.
+- Fixed accent color not following the current theme in some views.
+- Fixed empty menu bar causing a white line at the top of frameless windows on Linux.
+- Fixed the tab "+" button ignoring clicks when the event was swallowed by header drag detection on Windows.
+- Fixed terminal losing focus after quick command execution, drag, or scrollbar interaction.
+
+Thanks to @wangxufeng and @surenwuyuwuqiu for their contributions to this release.
+
+### 更新内容
+
+**新功能**
+- 多面板 AI 锁定。AI 可同时控制多个终端，每个终端显示独立标签，AI 输入框中可用 `#<标签>` 引用特定终端。
+- AI `ask_user` 工具。AI 可在自主运行过程中向用户提问并等待回复后继续，适用于确认和澄清场景。
+- 终端会话输出日志。工作区面板菜单中可开关录制，录制期间面板标题栏显示红色 REC 圆点，日志保存至设置中配置的会话日志目录。
+- SSH 支持带口令保护的私钥。
+- 终端光标闪烁可配置，默认开启。（@wangxufeng）
+- 关闭带活动连接的标签/面板时弹出确认，支持"不再提示"选项。（@wangxufeng）
+- 标签页锁定。右键标签选择锁定后，标签显示锁定图标并防止误关闭。
+- 复制标签功能扩展到 SFTP 和数据库标签（此前仅支持终端）。
+
+**改进**
+- AI 工具链优化:新增命令完成标记、`start_command` 风险控制、`collect_output` 空闲检测。
+- WebDAV 连接改为单个 URL 字段，取代原来的主机 / 端口 / SSL 开关组合。
+- 广播输入支持逐面板选择:Ctrl+点击面板标题栏,广播输入时仅发送到已选中的面板。
+- 标签样式:限制最小宽度,关闭/更多/AI 锁定按钮仅在 hover 时显示,本地终端同名标签自动去重。
+- 侧边栏 Tunnels 和 QuickCommands 面板取消搜索栏与列表之间的分隔线。
+- 默认 `openSettings` 快捷键绑定为 Ctrl+,(macOS 通过别名映射为 Cmd+,)。(@surenwuyuwuqiu)
+
+**Bug 修复**
+- 修复通过 Wails 剪贴板粘贴的问题,并为 WKWebView 补充 Cmd+A / Cmd+C / Cmd+V 快捷键。(@surenwuyuwuqiu)
+- 修复快捷命令自动执行使用 LF 换行导致多行命令无法可靠执行的问题,改用 CR。(@wangxufeng)
+- 修复 KeepAlive 重新激活后终端滚动位置未恢复的问题。(@wangxufeng)
+- 修复 WebDAV `ChangeRemoteDir` 在某些服务端目录 `Stat` 无法返回预期元信息时失败的问题,改用 `ReadDir`。
+- 修复非终端类型连接使用"保存并连接"时编辑内容未持久化的问题。
+- 修复部分视图强调色未跟随当前主题的问题。
+- 修复 Linux 无边框窗口顶部因空菜单栏出现白色横线的问题。
+- 修复 Windows 标签栏 "+" 按钮点击被标题栏拖拽逻辑吞掉的问题。
+- 修复快捷命令执行、拖拽、滚动条交互后终端失焦的问题。
+
+感谢 @wangxufeng 和 @surenwuyuwuqiu 对本版本的贡献。
+
 ## v1.4.2
 
 ### What's Changed
