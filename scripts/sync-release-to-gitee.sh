@@ -129,11 +129,16 @@ for tag in "${TAGS[@]}"; do
   notes=$(gh release view "$tag" -R "$GH_REPO" --json body --jq '.body' 2>/dev/null || echo "")
   pre=$(gh release view "$tag" -R "$GH_REPO" --json isPrerelease --jq '.isPrerelease' 2>/dev/null || echo "false")
 
-  # Download assets
-  tmp=$(mktemp -d)
-  trap 'rm -rf "$tmp"' EXIT
-  echo "   downloading ${#assets[@]} asset(s) from GitHub ..."
-  gh release download "$tag" -R "$GH_REPO" -D "$tmp" --clobber
+  # Download assets (or reuse a local directory when SRC_DIR is set)
+  if [ -n "${SRC_DIR:-}" ]; then
+    tmp="$SRC_DIR"
+    echo "   using local assets from $tmp"
+  else
+    tmp=$(mktemp -d)
+    trap 'rm -rf "$tmp"' EXIT
+    echo "   downloading ${#assets[@]} asset(s) from GitHub ..."
+    gh release download "$tag" -R "$GH_REPO" -D "$tmp" --clobber
+  fi
 
   # Locate or create the Gitee release
   rid=$(gitee_release_id "$tag" || true)
@@ -151,8 +156,13 @@ for tag in "${TAGS[@]}"; do
   # Upload, skipping files already attached
   mapfile -t attached < <(gitee_attached_names "$rid")
   tag_failed=0
-  for f in "$tmp"/*; do
-    base=$(basename "$f")
+  for base in "${assets[@]}"; do
+    f="$tmp/$base"
+    if [ ! -f "$f" ]; then
+      echo "   ! $base (missing in $tmp)" >&2
+      tag_failed=1
+      continue
+    fi
     if printf '%s\n' "${attached[@]}" | grep -qxF "$base"; then
       echo "   = $base (already attached, skip)"
       continue
@@ -163,7 +173,9 @@ for tag in "${TAGS[@]}"; do
     fi
   done
 
-  rm -rf "$tmp"; trap - EXIT
+  if [ -z "${SRC_DIR:-}" ]; then
+    rm -rf "$tmp"; trap - EXIT
+  fi
   if [ "$tag_failed" -eq 0 ]; then ok=$((ok+1)); else failed=$((failed+1)); fi
 done
 
