@@ -628,6 +628,11 @@ function handleTerminalKey(e: KeyboardEvent): boolean {
 
   // Cmd/Ctrl+V: paste via Wails clipboard (xterm's DOM paste is unreliable in WKWebView).
   if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && (e.key === 'v' || e.key === 'V') && e.type === 'keydown') {
+    // In alternate-screen apps (vim, k9s, htop, less…) pass Ctrl+V through so
+    // remote apps can use it as a binding (e.g. vim visual block).
+    if (terminalInput?.isInAlternateScreen()) {
+      return true
+    }
     e.preventDefault()
     if (props.mode === 'ssh' || props.mode === 'local') {
       ClipboardGetText().then(text => {
