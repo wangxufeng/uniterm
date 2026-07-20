@@ -358,6 +358,24 @@ async function duplicateTab() {
   const newPanel = panelStore.createPanel(panel.config, panel.type)
   panelStore.updateTitle(newPanel.id, panel.title)
 
+  // Create + bind the session BEFORE mounting the tab, so the terminal has a
+  // sessionId on first mount. Mounting first (empty sessionId) leaves the
+  // shared terminal keyed by '' and bindSession's later id change can't
+  // transfer it (the watch skips when oldId is falsy), so server output is
+  // dropped until an incidental resize rebuilds the reference.
+  let info
+  if (panel.config) {
+    try {
+      const sessionType = resolveSessionType(tab.type, panel.config)
+      info = await CreateSession(sessionType, panel.config)
+      panelStore.bindSession(newPanel.id, info.id)
+      if (tab.type !== 'terminal') sessionStore.initSession(info.id)
+    } catch (e) {
+      console.error('Failed to duplicate session:', e)
+      return
+    }
+  }
+
   let newTab
   if (tab.type === 'terminal') {
     newTab = tabStore.createTerminalTab(newPanel.title, newPanel.id)
@@ -370,26 +388,21 @@ async function duplicateTab() {
     return
   }
   panelStore.movePanelToTab(newPanel.id, newTab.id)
-
-  if (panel.config) {
-    try {
-      const sessionType = resolveSessionType(tab.type, panel.config)
-      const info = await CreateSession(sessionType, panel.config)
-      panelStore.bindSession(newPanel.id, info.id)
-      if (tab.type !== 'terminal') sessionStore.initSession(info.id)
-    } catch (e) {
-      console.error('Failed to duplicate session:', e)
-    }
-  }
 }
 
 // The session-type argument to CreateSession isn't always panel.config.type:
-// database panels split into mysql/postgres/redis/mongodb by dbType.
+// - database panels split into mysql/postgres/redis/mongodb by dbType;
+// - a file-transfer (sftp) tab shares the SSH connection, so its config.type
+//   is 'ssh' but the session must be created as 'sftp' (ftp/smb/webdav/s3
+//   already carry a matching config.type).
 function resolveSessionType(tabType: string, config: any): string {
   if (tabType === 'database' || tabType === 'mongodb' || tabType === 'redis') {
     if (config?.dbType === 'redis') return 'redis'
     if (config?.dbType === 'mongodb') return 'mongodb'
     return 'database'
+  }
+  if (tabType === 'sftp') {
+    return config?.type === 'ssh' ? 'sftp' : config?.type
   }
   return config?.type
 }
