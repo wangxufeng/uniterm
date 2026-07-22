@@ -1626,10 +1626,15 @@ watch(
   opacity: var(--bg-mask-opacity, 0.6);
 }
 .app-container.has-bg .main-content,
-.app-container.has-bg .main-content :deep(*),
+.app-container.has-bg .main-content :deep(*:not(.xterm-cursor)),
 .app-container.has-bg .app-header,
 .app-container.has-bg :deep(.app-header *) {
   background-color: transparent !important;
+}
+/* 开背景时 AI 输入(IN)标签底色被抹透明，深色文字会糊在图上；
+   改用与输出(OUT)标签一致的白字，保证在背景图上清晰可读 */
+.app-container.has-bg .main-content :deep(.in-box .tool-box-label) {
+  color: var(--on-accent) !important;
 }
 /* 标签栏毛玻璃 */
 .app-container.has-bg :deep(.app-header) {

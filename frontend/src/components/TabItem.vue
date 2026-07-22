@@ -30,13 +30,6 @@
       />
       <span v-else-if="!isActive && hasNotification && !tab.locked" class="tab-notification-dot" />
     </span>
-    <span
-      v-if="isAILocked"
-      class="tab-ai-lock-indicator"
-      :title="t('terminal.aiLocked')"
-    >
-      <Sparkles :size="14" />
-    </span>
     <span v-if="!editing" class="tab-name" :class="{ 'tab-disconnected': isDisconnected }" @dblclick.stop="startEdit">
       <ArrowDownUp v-if="hasActiveTransfers" class="transfer-indicator" :size="14" title="Transferring..." />
       {{ tab.name }}
@@ -113,7 +106,7 @@ import {
 } from '../../wailsjs/go/main/App'
 import { msg } from '../services/message'
 import type { TerminalTab, SettingsTab, SFTPTab, RDPTab, VNCTab, SPICETab, DBTab, MonitorTab, WorkspaceTab } from '../types/workspace'
-import { SquareTerminal, Laptop, FolderUp, HardDrive, Cloud, Globe, Monitor, MonitorCloud, MonitorSmartphone, Settings, Sparkles, Database, DatabaseZap, Layers, Activity, Terminal, Zap, X, ArrowDownUp, LayoutDashboard, Cable, SquarePlus, Lock, MoreHorizontal } from '@lucide/vue'
+import { SquareTerminal, Laptop, FolderUp, HardDrive, Cloud, Globe, Monitor, MonitorCloud, MonitorSmartphone, Settings, Database, DatabaseZap, Layers, Activity, Terminal, Zap, X, ArrowDownUp, LayoutDashboard, Cable, SquarePlus, Lock, MoreHorizontal } from '@lucide/vue'
 
 const props = defineProps<{
   tab: TerminalTab | SettingsTab | SFTPTab | RDPTab | VNCTab | SPICETab | DBTab | MonitorTab | WorkspaceTab
@@ -534,12 +527,12 @@ onUnmounted(() => {
   box-shadow: inset 0 0 0 1px var(--accent);
 }
 .tab-item.ai-locked {
-  box-shadow: inset 2px 0 0 var(--warning);
+  box-shadow: inset 2px 0 0 var(--warning), inset 0 0 12px var(--warning-subtle);
 }
 .tab-item.active.ai-locked {
   background: var(--bg-hover);
   color: var(--text-primary);
-  box-shadow: inset 0 0 0 1px var(--accent), inset 2px 0 0 var(--warning);
+  box-shadow: inset 0 0 0 1px var(--accent), inset 2px 0 0 var(--warning), inset 0 0 12px var(--warning-subtle);
 }
 .tab-name {
   font-size: 12px;
@@ -610,14 +603,6 @@ onUnmounted(() => {
   padding: 2px 6px;
   width: 120px;
   outline: none;
-}
-.tab-ai-lock-indicator {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  margin-right: 2px;
-  color: var(--warning);
 }
 .tab-close {
   display: flex;
