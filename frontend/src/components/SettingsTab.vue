@@ -621,7 +621,7 @@
           </div>
         </el-form-item>
         <el-form-item :label="t('settings.modelBaseURL')">
-          <el-input v-model="modelForm.baseURL" :placeholder="modelForm.protocol === 'openai' ? 'https://api.openai.com/v1' : 'https://api.anthropic.com/v1'" />
+          <el-input v-model="modelForm.baseURL" :placeholder="modelForm.protocol === 'openai' ? 'https://api.openai.com/v1' : 'https://api.anthropic.com'" />
         </el-form-item>
         <el-form-item :label="t('settings.modelUserAgent')">
           <el-select v-model="modelForm.userAgent" style="width: 100%" filterable allow-create>

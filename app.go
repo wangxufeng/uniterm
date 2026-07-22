@@ -1475,7 +1475,15 @@ func (a *App) chatCompletionAnthropic(apiKey, baseURL, model string, reqBody map
 		return "", fmt.Errorf("marshal modified request: %w", err)
 	}
 
-	url := strings.TrimRight(baseURL, "/") + "/messages"
+	// Anthropic base URL conventionally omits /v1 (client appends /v1/messages).
+	// Tolerate legacy configs that already include the /v1 suffix.
+	base := strings.TrimRight(baseURL, "/")
+	var url string
+	if strings.HasSuffix(base, "/v1") {
+		url = base + "/messages"
+	} else {
+		url = base + "/v1/messages"
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 600*time.Second)
 	defer cancel()

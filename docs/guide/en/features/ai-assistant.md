@@ -27,7 +27,7 @@ Supports Anthropic and OpenAI-compatible APIs. You can add multiple models and s
 |------|------|
 | Name | Custom display name used to distinguish configurations in the model list |
 | Protocol | Choose **Anthropic** or **OpenAI** protocol, determining the request format |
-| Base URL | API endpoint address. OpenAI defaults to `https://api.openai.com/v1`, Anthropic defaults to `https://api.anthropic.com/v1` |
+| Base URL | API endpoint address. OpenAI defaults to `https://api.openai.com/v1`, Anthropic defaults to `https://api.anthropic.com` |
 | User-Agent | Optional. Custom User-Agent header identifier. Presets include uniTerm, Claude Code, Cursor, and manual input is also supported |
 | API Key | API authentication key, stored as a password |
 | Model | Model name (e.g. `gpt-4o`, `claude-sonnet-4-20250514`). Use the "Fetch Model List" button to pull available models from the API |
