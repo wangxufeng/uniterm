@@ -949,6 +949,11 @@ func (a *App) CreateSession(sessionType string, config session.ConnectionConfig)
 	// Set parent HWND for RDP sessions
 	if rdp, ok := s.(*session.RDPSession); ok {
 		rdp.SetParentHwnd(a.mainHwnd)
+		// Notify the frontend when the user exits native full screen so it can
+		// resume position sync.
+		rdp.SetOnFullScreenExit(func() {
+			runtime.EventsEmit(a.ctx, "rdp:fullscreen-exit", s.ID())
+		})
 	}
 
 	s.SetOnDataCallback(func(data []byte) {
@@ -1277,6 +1282,23 @@ func (a *App) RDPSetFocus(sessionID string, focused bool) error {
 		return fmt.Errorf("session is not RDP")
 	}
 	rdp.SetFocus(focused)
+	return nil
+}
+
+// RDPSetFullScreen toggles the ActiveX control's built-in full-screen mode.
+func (a *App) RDPSetFullScreen(sessionID string, full bool) error {
+	if a.sessionManager == nil {
+		return fmt.Errorf("session manager not initialized")
+	}
+	s, ok := a.sessionManager.Get(sessionID)
+	if !ok {
+		return fmt.Errorf("session not found: %s", sessionID)
+	}
+	rdp, ok := s.(*session.RDPSession)
+	if !ok {
+		return fmt.Errorf("session is not RDP")
+	}
+	rdp.SetFullScreen(full)
 	return nil
 }
 

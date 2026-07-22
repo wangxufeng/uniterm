@@ -457,6 +457,7 @@
   "rdp.retry": "Retry",
   "rdp.timeout": "Connection timed out. Please check the host address and network connectivity.",
   "rdp.resolution": "Resolution",
+  "rdp.fullscreen": "Fullscreen",
   "vnc.connecting": "Connecting to {host}...",
   "vnc.connected": "Connected",
   "vnc.disconnected": "Disconnected",

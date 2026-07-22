@@ -68,6 +68,7 @@
         @click.stop
       >
         <div v-if="canDuplicate" class="menu-item" @click="duplicateTab">{{ t('tab.duplicate') }}</div>
+        <div v-if="tab.type === 'rdp'" class="menu-item" @click="enterRdpFullScreen">{{ t('rdp.fullscreen') }}</div>
         <div v-if="tab.type === 'terminal'" class="menu-item" @click="toggleAiLock">
           {{ isAILocked ? t('terminal.aiLocked') : t('terminal.lockAI') }}
         </div>
@@ -108,6 +109,7 @@ import {
   DisableSessionOutputLog,
   GetSessionOutputLogInfo,
   OpenPathInExplorer,
+  RDPSetFullScreen,
 } from '../../wailsjs/go/main/App'
 import { msg } from '../services/message'
 import type { TerminalTab, SettingsTab, SFTPTab, RDPTab, VNCTab, SPICETab, DBTab, MonitorTab, WorkspaceTab } from '../types/workspace'
@@ -430,6 +432,15 @@ function openMonitor() {
     window.dispatchEvent(new CustomEvent('app:connect-monitor', { detail: panel }))
   }
   closeContextMenu()
+}
+
+async function enterRdpFullScreen() {
+  closeContextMenu()
+  const panel = panelStore.getPanel((props.tab as RDPTab).panelId)
+  const sid = panel?.sessionId
+  if (!sid) return
+  window.dispatchEvent(new CustomEvent('rdp:fullscreen-enter'))
+  try { await RDPSetFullScreen(sid, true) } catch (e) { console.error('RDP fullscreen error:', e) }
 }
 
 async function toggleOutputLog() {
