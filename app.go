@@ -1477,7 +1477,7 @@ func (a *App) chatCompletionAnthropic(apiKey, baseURL, model string, reqBody map
 
 	url := strings.TrimRight(baseURL, "/") + "/messages"
 
-	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 600*time.Second)
 	defer cancel()
 
 	a.chatCancelMu.Lock()
@@ -1502,6 +1502,9 @@ func (a *App) chatCompletionAnthropic(apiKey, baseURL, model string, reqBody map
 	client := &http.Client{Timeout: 0}
 	res, err := client.Do(req)
 	if err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return "", fmt.Errorf("AI_REQUEST_TIMEOUT")
+		}
 		return "", err
 	}
 	defer res.Body.Close()
@@ -1791,7 +1794,7 @@ func (a *App) chatCompletionOpenAI(apiKey, baseURL, model string, reqBody map[st
 		return "", fmt.Errorf("marshal openai request: %w", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 600*time.Second)
 	defer cancel()
 
 	a.chatCancelMu.Lock()
@@ -1814,6 +1817,9 @@ func (a *App) chatCompletionOpenAI(apiKey, baseURL, model string, reqBody map[st
 	client := &http.Client{Timeout: 0}
 	res, err := client.Do(req)
 	if err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return "", fmt.Errorf("AI_REQUEST_TIMEOUT")
+		}
 		return "", err
 	}
 	defer res.Body.Close()

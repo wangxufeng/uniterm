@@ -141,6 +141,7 @@
   "ai.queue": "Queue",
   "ai.queueRemove": "Remove",
   "ai.interrupted": "Interrupted by user",
+  "ai.timeout": "AI response timed out (over 10 minutes). Please retry or break the task into smaller steps.",
   "ai.run": "Run",
   "ai.skip": "Skip",
   "ai.continue": "Continue",

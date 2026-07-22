@@ -141,6 +141,7 @@
   "ai.queue": "대기열에 추가",
   "ai.queueRemove": "대기열에서 제거",
   "ai.interrupted": "사용자가 중지함",
+  "ai.timeout": "AI 응답 시간이 초과되었습니다(10분 초과). 다시 시도하거나 작업을 더 작게 나누세요.",
   "ai.run": "실행",
   "ai.skip": "걸러뛰기",
   "ai.continue": "계속",

@@ -20,6 +20,13 @@ export class ChatCancelledError extends Error {
   }
 }
 
+export class ChatTimeoutError extends Error {
+  constructor() {
+    super('Chat request timed out')
+    this.name = 'ChatTimeoutError'
+  }
+}
+
 function isCancellationError(raw: string): boolean {
   const lower = raw.toLowerCase()
   return lower.includes('context canceled') || lower.includes('context cancelled')
@@ -70,6 +77,9 @@ export async function chat(options: ChatOptions): Promise<void> {
     const raw = e?.message || String(e)
     if (isCancellationError(raw)) {
       throw new ChatCancelledError()
+    }
+    if (raw.includes('AI_REQUEST_TIMEOUT')) {
+      throw new ChatTimeoutError()
     }
     throw new Error(formatAPIError(raw))
   }
