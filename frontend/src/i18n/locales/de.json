@@ -607,6 +607,7 @@
   "monitor.net.ipAddrs": "IP-Adressen",
   "db.database": "Datenbank",
   "db.databases": "Datenbanken",
+  "db.pgDbNameRequired": "PostgreSQL erfordert einen Datenbanknamen",
   "db.params": "Zusätzliche Parameter",
   "db.loading": "Laden...",
   "db.selectTableHint": "Doppelklicken Sie auf eine Datenbank oder Tabelle zur Ansicht",

@@ -132,14 +132,21 @@ func (p *postgresProvider) GetCapabilities() DBCapabilities {
 
 // ── Schema discovery ──
 
+// GetDatabases returns only the currently connected database. A PostgreSQL
+// connection is bound to a single database and cannot query tables across
+// databases, so exposing the whole cluster would let users open other
+// databases and see "no tables". To browse a different database, open a new
+// connection with that database name.
 func (p *postgresProvider) GetDatabases(db *sql.DB) ([]string, error) {
-	results, err := queryStrings(db, "SELECT datname FROM pg_database WHERE datistemplate = false ORDER BY datname")
+	results, err := queryStrings(db, "SELECT current_database() AS datname")
 	if err != nil {
 		return nil, err
 	}
 	names := make([]string, 0, len(results))
 	for _, row := range results {
-		names = append(names, row["datname"])
+		if row["datname"] != "" {
+			names = append(names, row["datname"])
+		}
 	}
 	return names, nil
 }

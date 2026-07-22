@@ -96,7 +96,7 @@
             <el-form-item v-if="form.authType === 'key' && (form.type === 'ssh' || form.type === 'mosh')" :label="t('conn.keyPassphrase')">
               <el-input v-model="form.password" type="password" show-password :key="passwordInputKey" :placeholder="t('conn.keyPassphrasePlaceholder')" />
             </el-form-item>
-            <el-form-item v-if="form.type === 'database' && form.dbType !== 'rqlite' && form.dbType !== 'redis'" :label="t('db.databases')">
+            <el-form-item v-if="form.type === 'database' && form.dbType !== 'rqlite' && form.dbType !== 'redis'" :label="t('db.databases')" :required="form.dbType === 'postgres'">
               <el-input v-model="form.dbName" :placeholder="t('db.databases')" />
             </el-form-item>
             <el-form-item v-if="form.type === 'database'" :label="t('db.params')">
@@ -840,6 +840,9 @@ function normalizeForm(): ConnectionConfig {
   if (normalized.type === 's3') {
     if (!normalized.user?.trim()) throw new Error('S3: Access Key is required')
     if (!normalized.password?.trim()) throw new Error('S3: Secret Key is required')
+  }
+  if (normalized.type === 'database' && normalized.dbType === 'postgres' && !normalized.dbName?.trim()) {
+    throw new Error(t('db.pgDbNameRequired'))
   }
   if (!normalized.name.trim()) {
     normalized.name = generateUniqueName(

@@ -607,6 +607,7 @@
   "monitor.net.ipAddrs": "IP 주소",
   "db.database": "데이터베이스",
   "db.databases": "데이터베이스",
+  "db.pgDbNameRequired": "PostgreSQL에는 데이터베이스 이름이 필요합니다",
   "db.params": "추가 매개변수",
   "db.loading": "불러오는 중...",
   "db.selectTableHint": "데이터베이스 또는 테이블을 더블클릭하여 보기",

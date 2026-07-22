@@ -607,6 +607,7 @@
   "monitor.net.ipAddrs": "IP位址",
   "db.database": "資料庫",
   "db.databases": "資料庫",
+  "db.pgDbNameRequired": "PostgreSQL 必須填寫資料庫名稱",
   "db.params": "額外參數",
   "db.loading": "載入中...",
   "db.selectTableHint": "雙擊資料庫或表查看",
