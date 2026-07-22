@@ -344,6 +344,21 @@ func (s *RDPSession) Connect(config ConnectionConfig) error {
 		}
 	}
 
+	// Route Windows key and special key combos (Win+E, Win+D, Alt+Tab, etc.)
+	// to the remote machine instead of the local one. KeyboardHookMode=1 means
+	// "apply key combinations at the remote server". (issue #351)
+	// Note: Ctrl+Alt+Del is a Secure Attention Sequence and can never be
+	// forwarded by any RDP client; use Ctrl+Alt+End instead.
+	secObj, _ := dispatch.GetProperty("SecuredSettings2")
+	if secObj != nil {
+		sec := secObj.ToIDispatch()
+		if sec != nil {
+			sec.PutProperty("KeyboardHookMode", 1)
+			sec.Release()
+			log.Writef("[RDP] KeyboardHookMode=1 (forward Win/combo keys to remote)")
+		}
+	}
+
 	// Suppress security prompts on all available AdvancedSettings versions
 	for _, ver := range []int{9, 8, 7, 6, 5, 4, 3} {
 		propName := fmt.Sprintf("AdvancedSettings%d", ver)
