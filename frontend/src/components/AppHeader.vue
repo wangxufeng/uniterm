@@ -179,6 +179,8 @@ async function onClose() {
       // skip dialog, proceed to quit
     } else {
       const dontShowAgain = ref(false)
+      // Hide the native RDP window so the dialog isn't covered by it (issue #346)
+      window.dispatchEvent(new CustomEvent('rdp:overlay-push'))
       try {
         await ElMessageBox.confirm(
           h('div', { style: 'display:flex;flex-direction:column;gap:10px' }, [
@@ -192,6 +194,8 @@ async function onClose() {
         )
       } catch {
         return // user cancelled
+      } finally {
+        window.dispatchEvent(new CustomEvent('rdp:overlay-pop'))
       }
       if (dontShowAgain.value) {
         settingsStore.settings.closeAppPrompt = false

@@ -852,6 +852,8 @@ async function closeTab(tabId: string, opts: { skipConfirm?: boolean } = {}) {
         // skip dialog, proceed to close
       } else {
         const dontShowAgain = ref(false)
+        // Hide the native RDP window so the dialog isn't covered by it (issue #346)
+        RDPHideForOverlay()
         try {
           await ElMessageBox.confirm(
             h('div', { style: 'display:flex;flex-direction:column;gap:10px' }, [
@@ -865,6 +867,8 @@ async function closeTab(tabId: string, opts: { skipConfirm?: boolean } = {}) {
           )
         } catch {
           return
+        } finally {
+          RDPShowForOverlay()
         }
         if (dontShowAgain.value) {
           settingsStore.settings.closeTabPrompt = false

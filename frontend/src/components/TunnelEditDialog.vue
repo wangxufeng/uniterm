@@ -156,6 +156,8 @@ const form = reactive(blankForm())
 const errorMsg = ref('')
 
 watch(visible, (v) => {
+  // Hide the native RDP window while the dialog is open so it isn't covered (issue #346)
+  window.dispatchEvent(new CustomEvent(v ? 'rdp:overlay-push' : 'rdp:overlay-pop'))
   if (!v) return
   errorMsg.value = ''
   if (props.editingId) {
