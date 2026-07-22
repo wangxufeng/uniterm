@@ -33,6 +33,8 @@
       <span>{{ config?.host }}:{{ config?.port || 3389 }}</span>
       <span class="rdp-status-sep">|</span>
       <span>{{ t('rdp.resolution') }}: {{ statusResolution }}</span>
+      <span class="rdp-status-spacer" />
+      <button class="rdp-fullscreen-btn" @click="enterFullScreen">{{ t('rdp.fullscreen') }}</button>
     </div>
   </div>
 </template>
@@ -42,7 +44,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Loader } from '@lucide/vue'
 import { useI18n } from '../i18n'
 import type { ConnectionConfig } from '../types/session'
-import { CreateSession, CloseSession, RDPHide } from '../../wailsjs/go/main/App'
+import { CreateSession, CloseSession, RDPHide, RDPSetFullScreen } from '../../wailsjs/go/main/App'
 import { EventsOn } from '../../wailsjs/runtime'
 import { usePanelStore } from '../stores/panelStore'
 
@@ -59,6 +61,9 @@ const status = ref<'connecting' | 'connected' | 'disconnected' | 'error'>('conne
 const currentSessionId = ref<string | null>(props.sessionId)
 const errorMessage = ref<string>('')
 const statusResolution = computed(() => {
+  if (props.config?.rdpFixedWidth === -1 || props.config?.rdpFixedHeight === -1) {
+    return t('rdp.fullscreen')
+  }
   if (props.config?.rdpFixedWidth && props.config?.rdpFixedHeight) {
     return `${props.config.rdpFixedWidth}×${props.config.rdpFixedHeight}`
   }
@@ -114,6 +119,14 @@ async function reconnect() {
     currentSessionId.value = null
   }
   await connect()
+}
+
+// Enter the ActiveX control's built-in full screen. The control renders its
+// own connection bar with a restore button to exit.
+async function enterFullScreen() {
+  if (!currentSessionId.value) return
+  window.dispatchEvent(new CustomEvent('rdp:fullscreen-enter'))
+  try { await RDPSetFullScreen(currentSessionId.value, true) } catch (e) { console.error('RDP fullscreen error:', e) }
 }
 
 // --- Events (lifecycle-scoped to avoid listener accumulation) ---
@@ -215,4 +228,18 @@ watch(() => props.sessionId, (newId) => {
   background: var(--success);
 }
 .rdp-status-sep { color: var(--text-disabled); }
+.rdp-status-spacer { flex: 1; }
+.rdp-fullscreen-btn {
+  border: 1px solid var(--border-default);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 1px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.rdp-fullscreen-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
 </style>

@@ -244,6 +244,8 @@ function getActiveRdpSessionId(): string | null {
 
 function rdpSyncPosition() {
   if (rdpOverlayCount.value > 0) return
+  // While in native ActiveX full screen, don't fight it with SetPosition.
+  if (rdpFullScreen.value) return
   const area = document.querySelector('.rdp-area') as HTMLElement | null
   if (!area) return
   const sid = getActiveRdpSessionId()
@@ -265,12 +267,23 @@ function rdpResetTracking() {
   nextTick(() => rdpSyncPosition())
 }
 
+// Native ActiveX full-screen: pause position sync while active, restore on exit.
+function onRdpFullScreenEnter() {
+  rdpFullScreen.value = true
+}
+function onRdpFullScreenExit() {
+  rdpFullScreen.value = false
+  nextTick(() => rdpSyncPosition())
+}
+
 
 // ── RDP overlay tracking: unified show/hide entry points ──
 // ALL triggers (context menus, dialogs, drag, resize, external events)
 // MUST call RDPHideForOverlay() to hide and RDPShowForOverlay() to restore.
 // Reference-counted: nesting works correctly across multiple concurrent triggers.
 const rdpOverlayCount = ref(0)
+// Set while a native ActiveX full-screen session is active.
+const rdpFullScreen = ref(false)
 let rdpRestoreTimer: ReturnType<typeof setTimeout> | null = null
 
 function RDPHideForOverlay() {
@@ -661,6 +674,10 @@ onMounted(async () => {
   window.addEventListener('split:resize-start', RDPHideForOverlay)
   window.addEventListener('split:resize-end', RDPShowForOverlay)
   window.addEventListener('rdp:sync-position', rdpResetTracking)
+  // RDP native full-screen enter/exit
+  window.addEventListener('rdp:fullscreen-enter', onRdpFullScreenEnter)
+  // Exit is emitted from Go when the user uses the connection bar's restore button.
+  EventsOn('rdp:fullscreen-exit', () => onRdpFullScreenExit())
   // Go-side WndProc events: window move/resize start/end
   EventsOn('rdp:move-resize-start', () => RDPHideForOverlay())
   EventsOn('rdp:move-resize-end', () => RDPShowForOverlay())
@@ -809,6 +826,7 @@ onUnmounted(() => {
   window.removeEventListener('split:resize-start', RDPHideForOverlay)
   window.removeEventListener('split:resize-end', RDPShowForOverlay)
   window.removeEventListener('rdp:sync-position', rdpResetTracking)
+  window.removeEventListener('rdp:fullscreen-enter', onRdpFullScreenEnter)
 
 })
 

@@ -457,6 +457,7 @@
   "rdp.retry": "重试",
   "rdp.timeout": "连接超时，请检查主机地址和网络连接。",
   "rdp.resolution": "分辨率",
+  "rdp.fullscreen": "全屏",
   "vnc.connecting": "正在连接到 {host}...",
   "vnc.connected": "已连接",
   "vnc.disconnected": "已断开",

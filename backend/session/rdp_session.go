@@ -36,6 +36,7 @@ var (
 	procPostMessageW       = user32Dll.NewProc("PostMessageW")
 	procFindWindowExW      = user32Dll.NewProc("FindWindowExW")
 	procSendMessageW       = user32Dll.NewProc("SendMessageW")
+	procGetSystemMetrics   = user32Dll.NewProc("GetSystemMetrics")
 )
 
 const (
@@ -59,6 +60,8 @@ const (
 	BM_CLICK          = 0x00F5
 	IDYES             = 6
 	IDOK              = 1
+	SM_CXSCREEN       = 0
+	SM_CYSCREEN       = 1
 )
 
 type RDPSession struct {
@@ -72,6 +75,22 @@ type RDPSession struct {
 
 	// Last known position, used by Show() after Hide()
 	trackX, trackY int
+
+	// Full-screen toggle request, applied on the COM STA thread by the message
+	// pump. COM (STA) calls must run on the thread that created the object;
+	// calling PutProperty from the Wails binding thread deadlocks.
+	fsRequested bool // a toggle has been requested
+	fsValue     bool // desired FullScreen value
+	fsActive    bool // last observed FullScreen state (for exit detection)
+	onFsExit    func() // called (on COM thread) when user leaves full screen via the connection bar
+}
+
+// SetOnFullScreenExit registers a callback fired when the user exits the
+// ActiveX full screen via its built-in connection bar.
+func (s *RDPSession) SetOnFullScreenExit(cb func()) {
+	s.mu.Lock()
+	s.onFsExit = cb
+	s.mu.Unlock()
 }
 
 func NewRDPSession(id string) *RDPSession {
@@ -244,6 +263,15 @@ func (s *RDPSession) Connect(config ConnectionConfig) error {
 
 	width := config.RdpFixedWidth
 	height := config.RdpFixedHeight
+	// Sentinel -1 means "follow the display": use the primary monitor's
+	// physical resolution as the remote desktop size. (issue: fullscreen option)
+	if width == -1 || height == -1 {
+		sw, _, _ := procGetSystemMetrics.Call(uintptr(SM_CXSCREEN))
+		sh, _, _ := procGetSystemMetrics.Call(uintptr(SM_CYSCREEN))
+		width = int(sw)
+		height = int(sh)
+		log.Writef("[RDP] fullscreen resolution: using display size %dx%d", width, height)
+	}
 	if width <= 0 {
 		width = 800
 	}
@@ -323,7 +351,10 @@ func (s *RDPSession) Connect(config ConnectionConfig) error {
 			adv.PutProperty("RDPPort", port)
 			adv.PutProperty("RedirectClipboard", true)
 			adv.PutProperty("RedirectDrives", true)
-			adv.PutProperty("DisplayConnectionBar", false)
+			// Let the ActiveX control handle full screen
+			// itself and show its built-in connection bar (which carries the
+			// restore/exit button). Requires ContainerHandledFullScreen=false.
+			adv.PutProperty("DisplayConnectionBar", true)
 			adv.PutProperty("EnableAutoReconnect", true)
 			if config.RdpEnableNLA {
 				adv.PutProperty("EnableCredSspSupport", true)
@@ -333,7 +364,10 @@ func (s *RDPSession) Connect(config ConnectionConfig) error {
 				adv.PutProperty("AuthenticationLevel", 0)
 			}
 			adv.PutProperty("WarnOnDirectConnect", false)
-			adv.PutProperty("ContainerHandledFullScreen", true)
+			// false = ActiveX manages full screen itself
+			// (renders its own connection bar with an exit button), instead of
+			// delegating to the host container.
+			adv.PutProperty("ContainerHandledFullScreen", false)
 			if config.RdpSmartSizing {
 				adv.PutProperty("SmartSizing", true)
 			}
@@ -351,7 +385,7 @@ func (s *RDPSession) Connect(config ConnectionConfig) error {
 		if advHigh != nil {
 			a := advHigh.ToIDispatch()
 			if a != nil {
-				a.PutProperty("ContainerHandledFullScreen", true)
+				a.PutProperty("ContainerHandledFullScreen", false)
 				a.PutProperty("WarnOnDirectConnect", false)
 				a.Release()
 				log.Writef("[RDP] AdvancedSettings%d: security prompts suppressed", ver)
@@ -434,6 +468,22 @@ func (s *RDPSession) runMessagePump() {
 			break
 		}
 
+		// Apply any pending full-screen toggle on THIS (COM STA) thread.
+		s.mu.Lock()
+		if s.fsRequested {
+			s.fsRequested = false
+			full := s.fsValue
+			rdp := s.rdp
+			s.fsActive = full
+			s.mu.Unlock()
+			if rdp != nil {
+				rdp.PutProperty("FullScreen", full)
+				log.Writef("[RDP] FullScreen applied on COM thread full=%v", full)
+			}
+		} else {
+			s.mu.Unlock()
+		}
+
 		ret, _, _ := procPeekMessage.Call(
 			uintptr(unsafe.Pointer(&m)),
 			0, 0, 0,
@@ -453,6 +503,36 @@ func (s *RDPSession) runMessagePump() {
 			// Check hwnd every ~1 second via heartbeat counter.
 			time.Sleep(50 * time.Millisecond)
 			noMsgCount++
+
+			// Detect full-screen exit via the built-in connection bar: the
+			// control flips FullScreen back to false. Poll on THIS COM thread
+			// every ~250ms while full screen is active.
+			if noMsgCount%5 == 0 {
+				s.mu.Lock()
+				active := s.fsActive
+				rdp := s.rdp
+				s.mu.Unlock()
+				if active && rdp != nil {
+					fs, err := rdp.GetProperty("FullScreen")
+					if err == nil && fs != nil {
+						stillFull := false
+						if b, ok := fs.Value().(bool); ok {
+							stillFull = b
+						}
+						if !stillFull {
+							s.mu.Lock()
+							s.fsActive = false
+							cb := s.onFsExit
+							s.mu.Unlock()
+							log.Writef("[RDP] full-screen exited via connection bar")
+							if cb != nil {
+								cb()
+							}
+						}
+					}
+				}
+			}
+
 			if noMsgCount%20 == 0 {
 				log.Writef("[RDP-pump] heartbeat idle=%d, pumpMsgs=%d, hwnd=0x%x", noMsgCount, pumpTick, s.hwnd)
 				// Check if RDP connection is still alive via ActiveX Connected property.
@@ -768,6 +848,21 @@ func (s *RDPSession) SetPosition(x, y, w, h int) {
 // Kept as a no-op for API compatibility with the frontend.
 func (s *RDPSession) SetFocus(focused bool) {
 	log.Writef("[RDP-focus] SetFocus focused=%v (no-op, owned-window model)", focused)
+}
+
+// SetFullScreen toggles the ActiveX control's built-in full-screen mode.
+// With ContainerHandledFullScreen=false the control renders its own
+// connection bar (with a restore button) to exit full screen.
+//
+// The actual COM PutProperty runs on the message-pump (STA) thread — see
+// runMessagePump — because STA COM objects must be called on their owning
+// thread; calling from the Wails binding thread deadlocks.
+func (s *RDPSession) SetFullScreen(full bool) {
+	s.mu.Lock()
+	s.fsRequested = true
+	s.fsValue = full
+	s.mu.Unlock()
+	log.Writef("[RDP] SetFullScreen requested full=%v (deferred to COM thread)", full)
 }
 
 func (s *RDPSession) Show() {

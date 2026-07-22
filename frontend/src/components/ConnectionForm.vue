@@ -591,6 +591,7 @@ const form = reactive<ConnectionConfig>({
 })
 
 const rdpResolutions = [
+  { label: t('rdp.fullscreen'), w: -1, h: -1 },
   { label: '800 × 600 (SVGA)', w: 800, h: 600 },
   { label: '1024 × 768 (XGA)', w: 1024, h: 768 },
   { label: '1280 × 720 (HD)', w: 1280, h: 720 },
