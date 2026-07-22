@@ -116,7 +116,7 @@ func (s *TelnetSession) readLoop(ctx context.Context) {
 			if err != io.EOF {
 				s.emitData([]byte(fmt.Sprintf("\r\n\x1b[31m[read error: %v]\x1b[0m\r\n", err)))
 			} else {
-				s.emitData([]byte("\r\n\x1b[31mConnection closed by remote host. Press Enter to reconnect.\x1b[0m\r\n"))
+				s.emitData(disconnectNotice("Connection closed by remote host."))
 			}
 			s.Disconnect()
 			return

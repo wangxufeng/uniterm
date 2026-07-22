@@ -127,7 +127,7 @@ func (s *SerialSession) readLoop() {
 			if err != io.EOF {
 				s.emitData([]byte(fmt.Sprintf("\r\n\x1b[31m[Serial read error: %v]\x1b[0m\r\n", err)))
 			} else {
-				s.emitData([]byte("\r\n\x1b[31mSerial device disconnected. Press Enter to reconnect.\x1b[0m\r\n"))
+				s.emitData(disconnectNotice("Serial device disconnected."))
 			}
 			s.Disconnect()
 			return

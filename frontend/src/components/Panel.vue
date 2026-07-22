@@ -349,7 +349,10 @@ async function retryConnection(silent = false) {
     props.panel.config.password = result.password
   }
 
-  baseTerminalRef.value?.write(RESET_MOUSE_MODES + '\r\n\x1b[33mReconnecting...\x1b[0m\r\n')
+  const now = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const reconnectAt = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`
+  baseTerminalRef.value?.write(RESET_MOUSE_MODES + `\r\n\x1b[33mReconnecting... (${reconnectAt})\x1b[0m\r\n`)
   try {
     const info = await CreateSession(props.panel.config.type, props.panel.config)
     panelStore.bindSession(props.panel.id, info.id)

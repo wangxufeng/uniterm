@@ -331,7 +331,7 @@ func (s *SSHSession) readLoop() {
 				last, _ := s.lastRecv.Load().([]byte)
 				sent, _ := s.lastSent.Load().([]byte)
 				log.Writef("ssh disconnect: remote closed (EOF), %s lastRecv=%s lastSent=%s", s.kaDiag(), tailHex(last, 64), tailHex(sent, 32))
-				s.emitData([]byte("\r\n\x1b[31mConnection closed by remote host. Press Enter to reconnect.\x1b[0m\r\n"))
+				s.emitData(disconnectNotice("Connection closed by remote host."))
 			}
 			s.Disconnect()
 			return
@@ -479,7 +479,7 @@ func (s *SSHSession) startKeepAlive() {
 
 			if failures >= sshKeepAliveMaxFail {
 				log.Writef("ssh disconnect: keepalive timeout, %s", s.kaDiag())
-				s.emitData([]byte("\r\n\x1b[31mConnection lost. Press Enter to reconnect.\x1b[0m\r\n"))
+				s.emitData(disconnectNotice("Connection lost."))
 				s.Disconnect()
 				return
 			}

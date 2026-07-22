@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -16,6 +17,13 @@ const (
 	StatusDisconnected SessionStatus = "disconnected"
 	StatusError        SessionStatus = "error"
 )
+
+// disconnectNotice formats a red disconnect prompt with the local time it
+// happened, so users can tell when a remote host dropped them. See issue #367.
+func disconnectNotice(msg string) []byte {
+	ts := time.Now().Format("2006-01-02 15:04:05")
+	return []byte(fmt.Sprintf("\r\n\x1b[31m%s (%s) Press Enter to reconnect.\x1b[0m\r\n", msg, ts))
+}
 
 type ConnectionGroup struct {
 	ID       string  `json:"id"`
