@@ -1626,11 +1626,13 @@ watch(
   opacity: var(--bg-mask-opacity, 0.6);
 }
 .app-container.has-bg .main-content,
-.app-container.has-bg .main-content :deep(*:not(.xterm-cursor)),
+.app-container.has-bg .main-content :deep(*:not(.xterm-cursor):not([class*="xterm-bg-"]):not(.xterm-selection):not(.xterm-selection *)),
 .app-container.has-bg .app-header,
 .app-container.has-bg :deep(.app-header *) {
   background-color: transparent !important;
 }
+/* 排除 xterm 自身着色的单元格与选区层：否则通配透明规则会抹掉 vim 可视模式
+   (Ctrl-V/Shift-V)、ls 配色、鼠标选区等由终端渲染的背景色 */
 /* 开背景时 AI 输入(IN)标签底色被抹透明，深色文字会糊在图上；
    改用与输出(OUT)标签一致的白字，保证在背景图上清晰可读 */
 .app-container.has-bg .main-content :deep(.in-box .tool-box-label) {
