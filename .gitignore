@@ -5,6 +5,7 @@ build/windows/*
 !build/windows/installer/
 build/windows/installer/*
 !build/windows/installer/project.nsi
+!build/windows/icon.ico
 !build/appicon.png
 !build/linux/
 uniTerm.exe
