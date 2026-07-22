@@ -37,6 +37,10 @@ var (
 	procFindWindowExW      = user32Dll.NewProc("FindWindowExW")
 	procSendMessageW       = user32Dll.NewProc("SendMessageW")
 	procGetSystemMetrics   = user32Dll.NewProc("GetSystemMetrics")
+	procGetWindowThreadPID = user32Dll.NewProc("GetWindowThreadProcessId")
+
+	// kernel32Dll is declared in local_session_windows.go (same package).
+	procGetCurrentProcID = kernel32Dll.NewProc("GetCurrentProcessId")
 )
 
 const (
@@ -143,6 +147,10 @@ func (s *RDPSession) autoDismissSecurityDialogs(stop <-chan struct{}) {
 	}
 	clsName, _ := windows.UTF16PtrFromString("#32770")
 
+	// Our own process ID, used to skip dialogs belonging to the system's mstsc.
+	pid, _, _ := procGetCurrentProcID.Call()
+	selfPID := uint32(pid)
+
 	ticker := time.NewTicker(50 * time.Millisecond)
 	defer ticker.Stop()
 
@@ -158,6 +166,17 @@ func (s *RDPSession) autoDismissSecurityDialogs(stop <-chan struct{}) {
 					uintptr(unsafe.Pointer(tPtr)),
 				)
 				if hwnd == 0 {
+					continue
+				}
+
+				// Only dismiss dialogs owned by our OWN process. The dialog class
+				// (#32770) and titles ("远程桌面连接" / "Windows 安全") are shared
+				// with the system's mstsc; without this filter we would repeatedly
+				// close mstsc's own password/security prompts, causing them to
+				// flicker and re-open. (issue #348)
+				var dlgPID uint32
+				procGetWindowThreadPID.Call(hwnd, uintptr(unsafe.Pointer(&dlgPID)))
+				if dlgPID != selfPID {
 					continue
 				}
 
