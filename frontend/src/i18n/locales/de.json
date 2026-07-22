@@ -141,6 +141,7 @@
   "ai.queue": "In Warteschlange",
   "ai.queueRemove": "Aus Warteschlange entfernen",
   "ai.interrupted": "Vom Benutzer unterbrochen",
+  "ai.timeout": "Zeitüberschreitung der KI-Antwort (über 10 Minuten). Bitte erneut versuchen oder die Aufgabe in kleinere Schritte aufteilen.",
   "ai.run": "Ausführen",
   "ai.skip": "Überspringen",
   "ai.continue": "Fortfahren",

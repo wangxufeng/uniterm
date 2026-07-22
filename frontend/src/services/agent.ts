@@ -1,4 +1,4 @@
-import { chat, AVAILABLE_TOOLS, ChatCancelledError } from './llm'
+import { chat, AVAILABLE_TOOLS, ChatCancelledError, ChatTimeoutError } from './llm'
 import { executeCommand, startCommand, captureTerminal, collectOutput, sendTerminalKey } from './terminalAgent'
 import { useAIStore } from '../stores/aiStore'
 import { useSettingsStore } from '../stores/settingsStore'
@@ -345,6 +345,8 @@ export async function runAgent(userInput: string) {
       assistantMsg.role = 'tool'
       if (e instanceof ChatCancelledError || store.stopRequested) {
         assistantMsg.content = '[INTERRUPTED]'
+      } else if (e instanceof ChatTimeoutError) {
+        assistantMsg.content = '[TIMEOUT]'
       } else {
         assistantMsg.content = `[Error: ${errMsg}]`
       }

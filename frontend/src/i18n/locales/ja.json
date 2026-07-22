@@ -141,6 +141,7 @@
   "ai.queue": "キューに追加",
   "ai.queueRemove": "キューから削除",
   "ai.interrupted": "手動で停止しました",
+  "ai.timeout": "AI の応答がタイムアウトしました（10 分以上）。再試行するか、タスクを小さく分割してください。",
   "ai.run": "実行",
   "ai.skip": "スキップ",
   "ai.continue": "続行",

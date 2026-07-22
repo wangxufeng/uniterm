@@ -141,6 +141,7 @@
   "ai.queue": "File d'attente",
   "ai.queueRemove": "Retirer de la file",
   "ai.interrupted": "Interrompu par l'utilisateur",
+  "ai.timeout": "La réponse de l'IA a expiré (plus de 10 minutes). Veuillez réessayer ou diviser la tâche en étapes plus petites.",
   "ai.run": "Exécuter",
   "ai.skip": "Ignorer",
   "ai.continue": "Continuer",

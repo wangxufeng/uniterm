@@ -141,6 +141,7 @@
   "ai.queue": "En cola",
   "ai.queueRemove": "Quitar de la cola",
   "ai.interrupted": "Interrumpido por el usuario",
+  "ai.timeout": "La respuesta de la IA agotó el tiempo de espera (más de 10 minutos). Vuelve a intentarlo o divide la tarea en pasos más pequeños.",
   "ai.run": "Ejecutar",
   "ai.skip": "Omitir",
   "ai.continue": "Continuar",

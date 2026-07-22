@@ -141,6 +141,7 @@
   "ai.queue": "排队发送",
   "ai.queueRemove": "移除",
   "ai.interrupted": "已手动停止",
+  "ai.timeout": "AI 响应超时（超过 10 分钟），请重试或将任务拆分得更小",
   "ai.run": "运行",
   "ai.skip": "跳过",
   "ai.continue": "继续",

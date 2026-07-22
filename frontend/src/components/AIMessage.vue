@@ -1,5 +1,5 @@
 <template>
-  <div class="ai-message" :class="[message.role, { interrupted: isInterrupted }]">
+  <div class="ai-message" :class="[message.role, { interrupted: isInterrupted || isTimeout }]">
     <div class="content">
       <div class="text" v-html="renderedContent" @click="onTextClick" />
 
@@ -132,6 +132,7 @@ const emit = defineEmits<{
 }>()
 
 const isInterrupted = computed(() => props.message.role === 'tool' && props.message.content === '[INTERRUPTED]')
+const isTimeout = computed(() => props.message.role === 'tool' && props.message.content === '[TIMEOUT]')
 
 const isPending = computed(() =>
   aiStore.pendingCommand?.messageId === props.message.id
@@ -589,6 +590,8 @@ const renderedContent = computed(() => {
   let html: string
   if (isInterrupted.value) {
     html = `<span class="interrupted-text">${escapeHtml(t('ai.interrupted'))}</span>`
+  } else if (isTimeout.value) {
+    html = `<span class="interrupted-text">${escapeHtml(t('ai.timeout'))}</span>`
   } else if (props.message.role === 'user') {
     html = escapeHtml(props.message.content)
   } else {
