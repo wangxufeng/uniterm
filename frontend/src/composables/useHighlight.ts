@@ -111,11 +111,18 @@ function highlightPlainText(text: string): string {
   return result
 }
 
-// Line contains only plain text and SGR (`\x1b[…m`) escapes — i.e. upstream
-// merely coloured parts of the line. Cursor movement / erase / OSC / private
-// modes indicate a TUI app (k9s, vim, htop…) drawing a screen; those lines
-// must stay untouched.
+// Line contains only plain text and SGR (`\x1b[…m`) escapes. Cursor
+// movement / erase / OSC / private modes indicate a TUI app (k9s, vim, htop…)
+// drawing a screen; those lines must stay untouched.
 const SGR_ONLY_LINE = /^(?:[^\x1b]|\x1b\[[\d;]*m)*$/
+
+// Returns true if the line contains any SGR sequence that sets a foreground
+// or background colour (30-37 / 38 / 39 / 48 / 49 / 90-97 / 100). Such lines
+// are emitted by TUI apps (vim reverse video, k9s, htop), by `ls --color`,
+// or by syntax-highlighting tools; injecting our own SGR on top of them
+// produces stacked colours and corrupted display. Lines with only "display
+// attribute" SGR (reset/bold/italic/underline/...) are still considered safe.
+const COLOUR_SGR = /\x1b\[[\d;]*?(?:3[0-8]|39|4[0-8]|49|9[0-7]|100)m/
 
 export function highlight(text: string): string {
   // Process line by line to avoid cross-line regex matches.
@@ -125,11 +132,10 @@ export function highlight(text: string): string {
     if (line === '\r\n' || line === '\n' || line === '\r') {
       result += line
     } else if (line) {
-      // For SGR-only lines, let highlightPlainText run — it splits on CSI
-      // boundaries and only touches the plain segments, so already-coloured
-      // spans pass through unchanged while the uncoloured remainder still
-      // gets highlighted.
-      if (line.indexOf('\x1b') !== -1 && !SGR_ONLY_LINE.test(line)) {
+      // Skip the line when it contains any non-SGR CSI (cursor moves, erase,
+      // private modes) or any colour-setting SGR — both indicate the upstream
+      // is already drawing a styled screen.
+      if (line.indexOf('\x1b') !== -1 && (COLOUR_SGR.test(line) || !SGR_ONLY_LINE.test(line))) {
         result += line
       } else {
         result += highlightPlainText(line)
