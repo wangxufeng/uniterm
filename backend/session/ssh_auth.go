@@ -17,6 +17,22 @@ func makeSSHAuthMethods(config ConnectionConfig, kbCallback ssh.KeyboardInteract
 		if signer, ok := parseAuthKeySigner(config); ok {
 			methods = append(methods, ssh.PublicKeys(signer))
 		}
+	default:
+		// Empty / unknown / legacy "agent" / "identity" AuthType falls back
+		// to password, matching buildAuthMethods. Without this default
+		// branch, a config that reaches the tunnel service without
+		// materializeIdentity being applied (which historically could
+		// happen on the SSH -J path when populatePasswords skips the
+		// identity row and the call site relies on the legacy fallback)
+		// produces an empty AuthMethods slice. crypto/ssh then walks
+		// the SSH_USERAUTH flow, sends only the "none" probe, gets
+		// rejected, and surfaces the user-visible
+		//   "attempted methods [none], no supported methods remain"
+		// which is impossible to act on. The SSH session path
+		// (ssh_session.go) already treats AuthType=="" as password in
+		// shouldPromptForSSHPassword / isSavedPasswordChallenge, so
+		// this fallback preserves symmetry across the connect surface.
+		methods = append(methods, ssh.Password(config.Password))
 	}
 
 	// Keyboard-interactive as fallback for password-less or failed-password scenarios.

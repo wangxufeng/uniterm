@@ -804,9 +804,18 @@ func (a *App) materializeIdentity(config session.ConnectionConfig) (session.Conn
 	}
 	resolve, err := a.identityResolver()
 	if err != nil {
+		log.Writef("[materializeIdentity] resolver error: %v", err)
 		return config, err
 	}
-	return session.MaterializeIdentity(config, resolve)
+	resolved, err := session.MaterializeIdentity(config, resolve)
+	if err != nil {
+		log.Writef("[materializeIdentity] MaterializeIdentity error: %v (config.User=%q config.PasswordLen=%d)",
+			err, config.User, len(config.Password))
+		return resolved, err
+	}
+	log.Writef("[materializeIdentity] resolved User=%q AuthType=%q PasswordLen=%d KeyPath=%q KeyContentLen=%d",
+		resolved.User, resolved.AuthType, len(resolved.Password), resolved.KeyPath, len(resolved.KeyContent))
+	return resolved, nil
 }
 
 // proxyResolver returns a resolver over the saved proxies (mirrors identityResolver).
