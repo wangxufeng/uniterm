@@ -23,7 +23,8 @@ export default defineConfig({
     }
   },
   server: {
-    port: 34115,
+    host: '127.0.0.1',
+    port: Number(process.env.WAILS_VITE_PORT) || 9245,
     strictPort: true
   }
 })
